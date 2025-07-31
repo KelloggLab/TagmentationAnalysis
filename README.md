@@ -26,7 +26,7 @@ If you encounter an architecture-related error, try:
 
 PYTHONNOUSERSITE=1 conda run -n integration_env jupyter notebook
 
-Then, navigate to the location of the notebook and open 20250728_ATS_TagmentationAnalysis2.ipynb.
+Then, navigate to the location of the notebook and open CAST_TagmentationNotebook.ipynb.
 
 ## Usage
 1. Modify the input parameters (e.g., input FASTA/FASTQ files, output directory) in the first cells of the notebook.
