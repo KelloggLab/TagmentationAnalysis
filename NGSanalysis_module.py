@@ -44,23 +44,23 @@ def write_trimmed_fastq(trimmed_reads, output_path):
             qual_str = ''.join([chr(q + 33) for q in qual])
             f.write(f"@{read_id}\n{seq}\n+\n{qual_str}\n")
 
-
-def extract_insertion_sites(bam_file, samtool_bin, strand="f"):
-    result = subprocess.run([samtool_bin+"/samtools", "view", bam_file], capture_output=True, text=True, check=True)
+def extract_insertion_sites(bam_file, strand="f"):
+    result = subprocess.run(["samtools", "view", bam_file],
+                            capture_output=True, text=True, check=True)
     positions = []
     for line in result.stdout.strip().split("\n"):
         if not line or line.startswith('@'):
             continue
-        fields = line.split("\t")
-        pos = int(fields[3])
+        fields = line.split("\t")      # 20250905 one base off FIX
+        pos1 = int(fields[3])          # SAM POS is 1-based
+        start0 = pos1 - 1              # convert to 0-based for fix
         read_len = len(fields[9])
         if strand == "f":
-            positions.append(pos)
+            positions.append(start0)
         else:
-            positions.append(pos + read_len - 1)
+            positions.append(start0 + read_len - 1)
     return positions
-
-
+	
 def sgRNA_finder(sgRNA, genome, PAM_len, natural_system):
     sgRNA = sgRNA.upper()
     genome = genome.upper()
