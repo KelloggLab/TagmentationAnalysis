@@ -3,6 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from Bio.Align import PairwiseAligner
+from typing import Optional, Literal, List
+from dataclasses import dataclass
+
 
 
 COMPLEMENT = str.maketrans("ACGTacgt", "TGCAtgca")
@@ -10,6 +13,14 @@ COMPLEMENT = str.maketrans("ACGTacgt", "TGCAtgca")
 
 def reverse_complement(seq: str) -> str:
     return seq.translate(COMPLEMENT)[::-1]
+
+def load_genome(filename):
+    from Bio import SeqIO
+    import re
+    genome_sequence = str(next(SeqIO.parse('cJP003_assembly.fasta', "fasta")).seq)
+    genome_sequence = re.sub(r'^>.*\n?','',genome_sequence,flags=re.MULTILINE)
+    genome_sequence = genome_sequence.replace('\n','').replace('\r','')
+    return genome_sequence
 
 
 
@@ -275,6 +286,16 @@ def top_n_insertions_frequencies(insertions, N):
 
     return top_freqs
 
+@dataclass(frozen=True)
+class SpacerHit:
+    strand: Literal["+","-"]
+    pam_start: int
+    pam_end: int
+    spacer_start: int
+    spacer_end: int
+    pam_dna: str
+    spacer_5to3: str   # DNA by default
+
 
 def extract_spacers(
     sequence: str,
@@ -407,6 +428,7 @@ def plot_insertion_profile(tsv,gRNA,genome_sequence,fig_filename,bins=100):
         ),
         annotation_clip=False
     )
+    window_bp = 200
     pct_ontarget = percent_within_distance(positions, gmap[0]['start'], window_bp)
     ax.set_title(f"Insertion site distribution: {pct_ontarget:.1f}%")
     
