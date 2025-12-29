@@ -1,15 +1,18 @@
-
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional, List, Literal, Dict
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from Bio.Align import PairwiseAligner
-from typing import Optional, Literal, List
-from dataclasses import dataclass
 
 
 
 COMPLEMENT = str.maketrans("ACGTacgt", "TGCAtgca")
 
+
+def which(df, pos):
+    return df[df["ins0"] == pos]
 
 def reverse_complement(seq: str) -> str:
     return seq.translate(COMPLEMENT)[::-1]
@@ -286,6 +289,7 @@ def top_n_insertions_frequencies(insertions, N):
 
     return top_freqs
 
+
 @dataclass(frozen=True)
 class SpacerHit:
     strand: Literal["+","-"]
@@ -295,6 +299,41 @@ class SpacerHit:
     spacer_end: int
     pam_dna: str
     spacer_5to3: str   # DNA by default
+
+
+IUPAC_DNA: Dict[str, str] = {
+    "A": "A",
+    "C": "C",
+    "G": "G",
+    "T": "T",
+    "U": "T",
+    "R": "[AG]",
+    "Y": "[CT]",
+    "S": "[GC]",
+    "W": "[AT]",
+    "K": "[GT]",
+    "M": "[AC]",
+    "B": "[CGT]",
+    "D": "[AGT]",
+    "H": "[ACT]",
+    "V": "[ACG]",
+    "N": "[ACGT]",
+}
+
+
+def _pam_matches_at(seq: str, i: int, pam: str) -> bool:
+    if i < 0 or i + len(pam) > len(seq):
+        return False
+    for j, code in enumerate(pam.upper()):
+        base = seq[i + j].upper().replace("U", "T")
+        allowed = IUPAC_DNA[code]
+        if allowed.startswith("["):
+            if base not in allowed.strip("[]"):
+                return False
+        else:
+            if base != allowed:
+                return False
+    return True
 
 
 def extract_spacers(
@@ -350,7 +389,7 @@ def extract_spacers(
 
     # - strand
     def scan_minus():
-        rc = reverse_complement_dna(seq.replace("U", "T"))
+        rc = reverse_complement(seq.replace("U", "T"))
         L = len(seq)
 
         for i in range(len(rc) - len(pam) + 1):
@@ -369,7 +408,7 @@ def extract_spacers(
                 continue
 
             spacer_plus = seq[spacer_start:spacer_end].upper().replace("U", "T")
-            spacer_guide = reverse_complement_dna(spacer_plus)
+            spacer_guide = reverse_complement(spacer_plus)
             pam_seq = seq[pam_start:pam_end].upper().replace("U", "T")
 
             hits.append(
