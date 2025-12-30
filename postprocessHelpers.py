@@ -396,7 +396,44 @@ def characterize_insertion(ins,PAM, guideRNA, genome_sequence):
     df['insertion_length']=insertion_length
     
     return df, alns
-        
+
+
+def at_richness(sequence: str, *, ignore_ambiguous: bool = True) -> float:
+    """
+    Compute AT richness (fraction of A/T bases) for a nucleic-acid sequence.
+
+    Parameters
+    ----------
+    sequence : str
+        DNA/RNA sequence. 'U' is treated as 'T'. Case-insensitive.
+    ignore_ambiguous : bool, default True
+        If True, compute A/T fraction over only unambiguous bases (A/C/G/T).
+        If False, compute A/T fraction over all characters except whitespace/gaps.
+
+    Returns
+    -------
+    float
+        AT richness in [0, 1]. Returns 0.0 if no valid bases are found.
+    """
+    if sequence is None:
+        raise ValueError("sequence must be a string, not None")
+
+    seq = sequence.upper().replace("U", "T")
+
+    # Remove common whitespace and gap characters
+    seq = "".join(ch for ch in seq if ch not in {" ", "\n", "\r", "\t", "-"})
+
+    if ignore_ambiguous:
+        valid = [ch for ch in seq if ch in {"A", "C", "G", "T"}]
+        denom = len(valid)
+        at = sum(ch in {"A", "T"} for ch in valid)
+    else:
+        denom = len(seq)
+        at = sum(ch in {"A", "T"} for ch in seq)
+
+    return (at / denom) if denom else 0.0
+
+    
 def _pam_matches_at(seq: str, i: int, pam: str) -> bool:
     if i < 0 or i + len(pam) > len(seq):
         return False
