@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from Bio.Align import PairwiseAligner
+from collections import Counter
 
 
 
