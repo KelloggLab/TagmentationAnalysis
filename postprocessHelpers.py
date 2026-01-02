@@ -15,6 +15,10 @@ COMPLEMENT = str.maketrans("ACGTacgt", "TGCAtgca")
 def which(df, pos):
     return df[df["ins0"] == pos]
 
+def between(df,s,e):
+    subset = df[df["ins0"].between(s, e)]
+    return subset
+
 def reverse_complement(seq: str) -> str:
     return seq.translate(COMPLEMENT)[::-1]
 
@@ -468,16 +472,17 @@ def plot_insertion_profile(tsv,gRNA,genome_sequence,fig_filename,bins=100):
         ),
         annotation_clip=False
     )
-    window_bp = 200
+    window_bp = 100
     pct_ontarget = percent_within_distance(positions, gmap[0]['start'], window_bp)
-    ax.set_title(f"Insertion site distribution: {pct_ontarget:.1f}%")
+    ndx = gmap[0]['start']
+    ax.set_title(f"Insertion site distribution: {pct_ontarget:.1f}% at site: {ndx:.1f} with window: {window_bp:.1f}")
     
     fig.tight_layout()
     #fig.savefig("figures/"+Path(tsv).stem+"insertion_histogram.pdf")
     fig.savefig(fig_filename)
     plt.show()
 
-def characterize_insertion(ins,PAM, guideRNA, genome_sequence):
+def characterize_insertion_from_position(ins,PAM, guideRNA, genome_sequence):
     import TagmentationAnalysis.postprocessHelpers as helper
     import pandas as pd
     
@@ -563,4 +568,106 @@ def characterize_insertion(ins,PAM, guideRNA, genome_sequence):
     
     
     return df, alns
+
+
+def characterize_insertion_from_spacer(tsv,PAM, guideRNA, genome_sequence):
+    import TagmentationAnalysis.postprocessHelpers as helper
+    import pandas as pd
+    import statistics
+
+    #from spacer find insertions that occur at the 'correct' distance: 
+    distance = 71
+    window = 10
     
+    grna = helper.map_guide_to_genome(guideRNA,genome_sequence)
+    if grna[0]['strand'] == '+':
+        predicted_pos = grna[0]['end']+3+distance
+    else:
+        predicted_pos = grna[0]['start']-3-distance
+
+    df = pd.DataFrame(columns=["PAM","protospacer","gRNA_strand","intervening","insertion_length","target_site",
+                               "PAM_start","PAM_end","proto_start","proto_end","aln_score",
+                               "intervene_start","intervene_end","ts_start","ts_end"])
+
+    ontarget_insertions = helper.between(tsv,predicted_pos-window,predicted_pos+window)
+    
+    if len(ontarget_insertions['ins0']) == 0:
+        return df
+    best_ontarget = statistics.mode(ontarget_insertions['ins0'])
+    
+
+    df['proto_start']= [ grna[0]['start'] ]
+    df['proto_end']= [ grna[0]['end'] ]
+    df['protospacer']= [ grna[0]['sequence'] ]
+    if grna[0]['strand'] == '+':
+        df['PAM_start'] = [ grna[0]['end'] ]
+        df['PAM_end']= [ grna[0]['end']+3 ]
+        df['PAM']= [ genome_sequence[ grna[0]['end'] : grna[0]['end']+3 ] ]
+        df['intervene_start']= [ grna[0]['end']+3 ]
+        df['intervene_end']= [ best_ontarget ]
+        df['intervening']= [ genome_sequence[ grna[0]['end']+3 :  best_ontarget  ] ]
+        df['target_site']= [ genome_sequence[best_ontarget-window:best_ontarget+window] ]
+        df['insertion_length']= [ len(genome_sequence[ grna[0]['end']+3 :  best_ontarget  ]) ]
+
+    else:
+        df['PAM_start'] = [ grna[0]['start']-3 ]
+        df['PAM_end']= [ grna[0]['start'] ]
+        df['PAM']= [ hp.reverse_complement( genome_sequence[grna[0]['start']-3:grna[0]['start']] ) ] #always list sequences 5'->3'
+        df['intervene_start']= [ best_ontarget ]
+        df['intervene_end']= [ grna[0]['start']-3 ]
+        df['intervening']= [ hp.reverse_complement( genome_sequence[best_ontarget:grna[0]['start']-3] ) ]
+        df['target_site']= [ hp.reverse_complement( genome_sequence[best_ontarget-window:best_ontarget+window] ) ]
+        df['insertion_length']=[ len(hp.reverse_complement( genome_sequence[best_ontarget:grna[0]['start']-3] )) ]
+
+    df['ts_start']= [ best_ontarget-window ]
+    df['ts_end']= [ best_ontarget+window ]
+    df['gRNA_strand']= [ grna[0]['strand'] ]
+    return df
+
+def at_richness(sequence: str, *, ignore_ambiguous: bool = True) -> float:
+        """
+        Compute AT richness (fraction of A/T bases) for a nucleic-acid sequence.
+        
+        Parameters
+        ----------
+        sequence : str
+        DNA/RNA sequence. 'U' is treated as 'T'. Case-insensitive.
+        ignore_ambiguous : bool, default True
+        If True, compute A/T fraction over only unambiguous bases (A/C/G/T).
+        If False, compute A/T fraction over all characters except whitespace/gaps.
+        
+        Returns
+        -------
+        float
+        AT richness in [0, 1]. Returns 0.0 if no valid bases are found.
+        """
+        if sequence is None:
+            raise ValueError("sequence must be a string, not None")
+            
+        seq = sequence.upper().replace("U", "T")
+        
+        # Remove common whitespace and gap characters
+        
+        seq = "".join(ch for ch in seq if ch not in {" ", "\n", "\r", "\t", "-"})
+        
+        if ignore_ambiguous:
+            valid = [ch for ch in seq if ch in {"A", "C", "G", "T"}]
+            denom = len(valid)
+            at = sum(ch in {"A", "T"} for ch in valid)
+        else:
+            denom = len(seq)
+            at = sum(ch in {"A", "T"} for ch in seq)
+            
+        return (at / denom) if denom else 0.0
+
+def sliding_window(s, window):
+    return [s[i:i+window] for i in range(0, len(s) - window + 1)]
+
+def at_sliding_window( seq, window ):
+    import TagmentationAnalysis.postprocessHelpers as hp
+    #for window, compute at-richness and store in a list
+    chunks = sliding_window( seq, window )
+    at = []
+    for ii in range(0,len(chunks)):
+        at.append( hp.at_richness( chunks[ ii ] ))
+    return at
