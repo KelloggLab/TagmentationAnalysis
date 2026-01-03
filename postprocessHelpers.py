@@ -325,7 +325,119 @@ IUPAC_DNA: Dict[str, str] = {
     "N": "[ACGT]",
 }
 
+def characterize_insertion(ins,PAM, guideRNA, genome_sequence):
+    import TagmentationAnalysis.postprocessHelpers as helper
+    import pandas as pd
+    
+    pos = ins['ins0']
+    window = 100
+    ts_window = 10
+    strand = ins['strand']
+    if strand == '+':
+        segment_to_search = genome_sequence[pos:pos+window]
+    else:
+        segment_to_search = genome_sequence[pos-window:pos]
+    all_spacers = helper.extract_spacers( segment_to_search, 'NGG', 20, '5prime', search_strands=strand)
 
+    alns = []
+    pam_dna = []
+    pam_start = []
+    pam_end = []
+    protospacer_dna = []
+    proto_start = []
+    proto_end = []
+    int_dna = []
+    intervene_start = []
+    intervene_end = []
+    ts_dna = []
+    ts_start = []
+    ts_end = []
+    insertion_length = []
+    
+    df = pd.DataFrame(columns=["PAM","protospacer","intervening","insertion_length","target_site",
+                               "PAM_start","PAM_end","proto_start","proto_end",
+                               "intervene_start","intervene_end","ts_start","ts_end"])
+    
+    for ii in range(0,len(all_spacers)):
+        alns.append( helper.local_align( guideRNA, all_spacers[ii].spacer_5to3 ))
+        pam_dna.append(all_spacers[ii].pam_dna)
+        protospacer_dna.append(all_spacers[ii].spacer_5to3)
+        
+        if strand == '+':
+            pam_start.append(all_spacers[ii].pam_start+pos)
+            pam_end.append(all_spacers[ii].pam_end+pos)
+            proto_start.append(all_spacers[ii].spacer_start+pos)
+            proto_end.append(all_spacers[ii].spacer_end+pos)
+            intstart = pos
+            intend = pos+all_spacers[ii].pam_end
+        else:
+            pam_start.append(all_spacers[ii].pam_start+pos-window)
+            pam_end.append(all_spacers[ii].pam_end+pos-window)
+            proto_start.append(all_spacers[ii].spacer_start+pos-window)
+            proto_end.append(all_spacers[ii].spacer_end+pos-window)
+            intstart = pos - window + all_spacers[ii].pam_end
+            intend = pos
+        insertion_length.append(intend-intstart+1)
+        intervene_start.append(intstart) 
+        intervene_end.append(intend)
+        int_dna.append(genome_sequence[intstart:intend])
+        ts_start.append(pos-ts_window)
+        ts_end.append(pos+ts_window)
+        ts_dna.append(genome_sequence[pos-ts_window:pos+ts_window])
+
+    df['PAM'] = pam_dna
+    df['protospacer']=protospacer_dna
+    df['intervening']=int_dna
+    df['target_site']=ts_dna
+    df['PAM_start']=pam_start
+    df['PAM_end']=pam_end
+    df['proto_start']=proto_start
+    df['proto_end']=proto_end
+    df['intervene_start']=intervene_start
+    df['intervene_end']=intervene_end
+    df['ts_start']=ts_start
+    df['ts_end']=ts_end
+    df['insertion_length']=insertion_length
+    
+    return df, alns
+
+
+def at_richness(sequence: str, *, ignore_ambiguous: bool = True) -> float:
+    """
+    Compute AT richness (fraction of A/T bases) for a nucleic-acid sequence.
+
+    Parameters
+    ----------
+    sequence : str
+        DNA/RNA sequence. 'U' is treated as 'T'. Case-insensitive.
+    ignore_ambiguous : bool, default True
+        If True, compute A/T fraction over only unambiguous bases (A/C/G/T).
+        If False, compute A/T fraction over all characters except whitespace/gaps.
+
+    Returns
+    -------
+    float
+        AT richness in [0, 1]. Returns 0.0 if no valid bases are found.
+    """
+    if sequence is None:
+        raise ValueError("sequence must be a string, not None")
+
+    seq = sequence.upper().replace("U", "T")
+
+    # Remove common whitespace and gap characters
+    seq = "".join(ch for ch in seq if ch not in {" ", "\n", "\r", "\t", "-"})
+
+    if ignore_ambiguous:
+        valid = [ch for ch in seq if ch in {"A", "C", "G", "T"}]
+        denom = len(valid)
+        at = sum(ch in {"A", "T"} for ch in valid)
+    else:
+        denom = len(seq)
+        at = sum(ch in {"A", "T"} for ch in seq)
+
+    return (at / denom) if denom else 0.0
+
+    
 def _pam_matches_at(seq: str, i: int, pam: str) -> bool:
     if i < 0 or i + len(pam) > len(seq):
         return False
