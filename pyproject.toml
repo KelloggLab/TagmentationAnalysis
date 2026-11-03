@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tagmentation"
+version = "0.1.0"
+description = "Helper modules for analyzing CAST tagmentation sequencing data (Kellogg Lab)"
+requires-python = ">=3.9"
+dependencies = ["biopython", "numpy", "pandas", "matplotlib", "pysam"]
+
+[tool.setuptools]
+packages = ["tagmentation"]

@@ -92,7 +92,7 @@ find_tool() {
     elif command -v "$name" >/dev/null 2>&1; then
         command -v "$name"
     else
-        echo "Error: '$name' not found on PATH. Set the ${name^^} environment variable to its full path." >&2
+        echo "Error: '$name' not found on PATH. Set the $(echo "$name" | tr a-z A-Z) environment variable to its full path." >&2
         exit 1
     fi
 }

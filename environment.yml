@@ -1,0 +1,23 @@
+name: analyze_tagmentation
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  # command-line tools
+  - cutadapt
+  - bwa
+  - samtools
+  - gnuplot
+  - bbmap          # legacy workflow only
+  # Python libraries
+  - pysam
+  - biopython
+  - numpy
+  - pandas
+  - matplotlib
+  - jupyterlab
+  - streamlit      # legacy web app only
+  - pip
+  - pip:
+      - -e .       # installs the tagmentation package from this folder
