@@ -5,6 +5,7 @@ Functions in the `tagmentation` package. Home: [KelloggLab/TagmentationAnalysis]
 ```python
 from tagmentation import postprocessHelpers as hp
 from tagmentation import TsvMapHelperFunctions as tsvhp
+from tagmentation import NovoCAST_helper as nc
 from tagmentation import NGSanalysis_module as ngs
 ```
 
@@ -150,13 +151,25 @@ Sums PWM scores across positions. `len(seq)` must equal the number of rows in `p
 
 Highest score any sequence could reach: the sum of the best letter at each position. Useful for normalizing scores.
 
+---
+
+## NovoCAST_helper
+
+Prediction for novel (engineered) CAST systems: where a given spacer should direct insertion, based on the spacing measured in our profiling data rather than on sequencing reads.
+
+### `INSERTION_DISTANCE`, `TARGET_SITE_WINDOW`
+
+Module constants: the insertion point lies `INSERTION_DISTANCE` (71) bp from the end of the PAM, and `TARGET_SITE_WINDOW` (10) bp of context is taken on each side of it.
+
 ### `predict_insertion_from_spacer(guideRNA, genome_sequence)`
 
 Predicts where a CAST would insert for a given guide, using a fixed spacing of **71 bp** downstream of the PAM, with a ±10 bp target-site window. Assumes a 3 bp PAM.
 
-Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `intervening`, `insertion_length`, `target_site`, and the coordinate columns `PAM_start/end`, `proto_start/end`, `intervene_start/end`, `ts_start/end`.
+Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `intervening`, `insertion_length`, `target_site`, and the coordinate columns `PAM_start/end`, `proto_start/end`, `intervene_start/end`, `ts_start/end`. The `aln_score` column exists but stays `NaN`, so the frame lines up with the one from `characterize_insertion_from_position`.
 
 This is a prediction from the guide alone and uses no sequencing data. For the same values measured from real insertions, use [`characterize_insertion_from_spacer`](#characterize_insertion_from_spacertsv-pam-guiderna-genome_sequence). Raises `IndexError` if the guide isn't in the genome.
+
+> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `tagmentation.NovoCAST_helper`.
 
 ---
 

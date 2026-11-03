@@ -17,6 +17,7 @@ scripts/
 tagmentation/                   Python helper functions (import in your own notebooks)
   postprocessHelpers.py           Sequence utilities: guide/PAM finding, A/T richness, spacers, PWMs
   TsvMapHelperFunctions.py        Analysis of insertion TSVs: on-target %, TSD motifs, profiles
+  NovoCAST_helper.py              Predicted insertion sites for novel CAST systems
   NGSanalysis_module.py           Functions behind the legacy bbmap workflow
 legacy/                         Older bbmap-based workflow (still works, no longer the main path)
   CAST_TagmentationNotebook.ipynb
@@ -118,9 +119,9 @@ Useful functions ([full API reference](docs/API.md)):
 | | `extract_tsd_centered_motifs_5p` | Sequences around each insertion, centered on the target-site duplication |
 | `postprocessHelpers` | `map_guide_to_genome` | Find a guide RNA in the genome (either strand) |
 | | `extract_spacers`, `find_pam_sites_with_optional_protospacer` | Find PAMs and candidate spacers (IUPAC motifs supported) |
-| | `predict_insertion_from_spacer` | Predicted insertion site for a spacer |
 | | `extract_sequence_windows`, `at_richness`, `at_sliding_window` | Sequence context and A/T content around sites |
 | | `build_log_odds_pwm`, `score_sequence_pwm` | Build and score position weight matrices |
+| `NovoCAST_helper` | `predict_insertion_from_spacer` | Predicted insertion site for a spacer (novel CAST systems) |
 
 ## Legacy workflow (bbmap)
 

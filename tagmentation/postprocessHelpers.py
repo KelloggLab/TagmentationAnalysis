@@ -434,49 +434,6 @@ def pwm_max_possible_score(pwm_df):
     """
     return float(pwm_df.max(axis=1).sum())
 
-def predict_insertion_from_spacer(guideRNA, genome_sequence):
-    #from spacer find insertions that occur at the 'correct' distance: 
-    distance = 71
-    window = 10
-    
-    grna = map_guide_to_genome(guideRNA,genome_sequence)
-    if grna[0]['strand'] == '+':
-        predicted_pos = grna[0]['end']+3+distance
-    else:
-        predicted_pos = grna[0]['start']-3-distance
-
-    df = pd.DataFrame(columns=["PAM","protospacer","gRNA_strand","intervening","insertion_length","target_site",
-                               "PAM_start","PAM_end","proto_start","proto_end","aln_score",
-                               "intervene_start","intervene_end","ts_start","ts_end"])
-
-    df['proto_start']= [ grna[0]['start'] ]
-    df['proto_end']= [ grna[0]['end'] ]
-    df['protospacer']= [ grna[0]['sequence'] ]
-    if grna[0]['strand'] == '+':
-        df['PAM_start'] = [ grna[0]['end'] ]
-        df['PAM_end']= [ grna[0]['end']+3 ]
-        df['PAM']= [ genome_sequence[ grna[0]['end'] : grna[0]['end']+3 ] ]
-        df['intervene_start']= [ grna[0]['end']+3 ]
-        df['intervene_end']= [ predicted_pos ]
-        df['intervening']= [ genome_sequence[ grna[0]['end']+3 :  predicted_pos  ] ]
-        df['target_site']= [ genome_sequence[predicted_pos-window:predicted_pos+window] ]
-        df['insertion_length']= [ len(genome_sequence[ grna[0]['end']+3 :  predicted_pos  ]) ]
-
-    else:
-        df['PAM_start'] = [ grna[0]['start']-3 ]
-        df['PAM_end']= [ grna[0]['start'] ]
-        df['PAM']= [ genome_sequence[grna[0]['start']-3:grna[0]['start']]  ] #always list top strand
-        df['intervene_start']= [ predicted_pos ]
-        df['intervene_end']= [ grna[0]['start']-3 ]
-        df['intervening']= [ genome_sequence[predicted_pos:grna[0]['start']-3] ]
-        df['target_site']= [ genome_sequence[predicted_pos-window:predicted_pos+window]  ]
-        df['insertion_length']=[ len(genome_sequence[predicted_pos:grna[0]['start']-3] ) ]
-
-    df['ts_start']= [ predicted_pos-window ]
-    df['ts_end']= [ predicted_pos+window ]
-    df['gRNA_strand']= [ grna[0]['strand'] ]
-    return df
-
 def degenerate_hamming(window: str, motif_iupac: str) -> int:
     """
     Returns number of mismatches under IUPAC degeneracy.
@@ -664,3 +621,9 @@ def find_pam_sites_with_optional_protospacer(
     # sort by PAM start then strand
     hits.sort(key=lambda d: (d["pam_start"], d["strand"]))
     return hits
+
+
+# Moved to NovoCAST_helper.py. Re-exported here so existing notebooks that call
+# hp.predict_insertion_from_spacer(...) keep working; prefer importing it from
+# tagmentation.NovoCAST_helper in new code.
+from .NovoCAST_helper import predict_insertion_from_spacer  # noqa: E402,F401
