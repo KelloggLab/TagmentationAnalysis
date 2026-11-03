@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import NGSanalysis_module as ngs
+from tagmentation import NGSanalysis_module as ngs
 import subprocess
 import tempfile
 import os
@@ -10,10 +10,9 @@ import numpy as np
 
 
 #configuration:
-#samtools
-samtools_bin = '/Users/ekello73/src/samtools-1.22.1/bin/bin/'
-#bbmap
-bbmap_bin = '/Users/ekello73/src/bbmap/'
+# Folders containing samtools and bbmap.sh. Leave unset to use the copies on your PATH.
+samtools_bin = os.environ.get("SAMTOOLS_BIN", "")
+bbmap_bin = os.environ.get("BBMAP_BIN", "")
 
 st.title("Kellogg Lab Tagmentation Analysis Toolkit")
 
@@ -41,7 +40,7 @@ sgRNA_sequence = st.text_input("sgRNA sequence")
 # Filepath for Output files from bbmap -- change to the absolute filepath where you want them exported to, end a dir with "/"
 #will change to a default path and not make this an option
 #path_to_output_dir = st.text_input("")
-path_to_output_dir= "/Users/ekello73/projects/NGS/TagmentationAnalysis/test/"
+path_to_output_dir = os.environ.get("TAGMENTATION_OUTPUT_DIR", "tagmentation_app_output/")
 
 # Adds this to the beginning of each output file for simplicity
 #sample_abbreviation = st.text_input("output_prefix")
@@ -106,9 +105,9 @@ if submit:
 		)
 		# Plot Integration profiles in genome and in CCDB gene
 		fig1 = ngs.plot_insertion_histogram(forward_insertions,reverse_insertions,region_start=0,region_end=len(genome_sequence),title="Genome",highlight_regions=highlight)
-		st.pyplot(fig1.gcf())
+		st.pyplot(fig1[0])
 		fig2 = ngs.plot_insertion_histogram(forward_insertions,reverse_insertions,region_start=ccdb_start_site-50,region_end=ccdb_start_site+len(ccdb_gene),title="CCDB Gene",highlight_regions=highlight)
-		st.pyplot(fig2.gcf())
+		st.pyplot(fig2[0])
         	# Plot Integration Profiles
 		modified_forward_insertions = ngs.integration_finder(forward_insertions,ccdb_gene,ccdb_start_site,PAM_start_site,PAM_end_site,natural_system,is_rc)
 		modified_reverse_insertions = ngs.integration_finder(reverse_insertions,ccdb_gene,ccdb_start_site,PAM_start_site,PAM_end_site,natural_system,is_rc)

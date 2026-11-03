@@ -1,50 +1,138 @@
 # TagmentationAnalysis
 
-This Jupyter notebook analyzes tagmentation sequencing data, performing alignment, quantification, and visualization of insertion patterns. It is designed to be modular and adaptable to different experimental setups.
+Kellogg Lab tools for mapping where CRISPR-associated transposons (CAST) integrate, using tagmentation sequencing data.
 
-## Features
+Each read starts in the transposon end (LE or RE) and reads into the flanking genomic DNA. The tools here trim off the transposon sequence, map what's left to the reference genome, and report one insertion coordinate per read. Further tools filter out donor-plasmid artifacts, plot insertion profiles, and analyze sequence preferences around insertion sites (guide/PAM position, A/T richness, target-site duplications, position weight matrices).
 
-- Aligns reads to reference sequences using `bbmap` and `samtools`
-- Extracts and quantifies integration indices
-- Plots strand-specific insertion site histograms
-- Outputs plots and data summaries to a specified directory
+## What's in this repository
 
-## Getting Started
+```
+pipeline/                       Command-line steps, run in order
+  map_junction_insertions.py      1. trim transposon end -> map -> per-read insertion TSV
+  filter_donor_backbone.sh        2. drop reads that come from the donor plasmid backbone
+scripts/
+  plot_profile.sh                 Quick genome-wide insertion plot (gnuplot)
+tagmentation/                   Python helper functions (import in your own notebooks)
+  postprocessHelpers.py           Sequence utilities: guide/PAM finding, A/T richness, spacers, PWMs
+  TsvMapHelperFunctions.py        Analysis of insertion TSVs: on-target %, TSD motifs, profiles
+  NGSanalysis_module.py           Functions behind the legacy bbmap workflow
+legacy/                         Older bbmap-based workflow (still works, no longer the main path)
+  CAST_TagmentationNotebook.ipynb
+  tagmentation_app.py             Streamlit web front end
+chipseq/
+  chipseq_pipeline.sh             Paired-end ChIP-seq pipeline (separate from tagmentation)
+environment.yml                 Conda environment with all dependencies
+```
 
-### Installation
+The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and `NGSanalysis_module.py` files at the top level only forward to the copies in `tagmentation/`. They're there so older notebooks that use `import TagmentationAnalysis.postprocessHelpers` keep working, and they can be deleted once those notebooks are updated.
 
-Clone this repository and create a new conda environment:
+## Installation
 
-conda create -n integration_env python=3.10 biopython matplotlib numpy bbmap samtools notebook jupyterlab -c conda-forge -c bioconda -y
+```bash
+git clone git@github.com:KelloggLab/TagmentationAnalysis.git
+cd TagmentationAnalysis
+conda env create -f environment.yml
+conda activate analyze_tagmentation
+```
 
-## Launch the Notebook
+This installs the command-line tools (cutadapt, bwa, samtools, gnuplot, bbmap) and the Python libraries. It also installs this folder as the `tagmentation` Python package, so `from tagmentation import postprocessHelpers` works from any directory.
 
-Activate the environment and launch Jupyter:
+## Main workflow
 
-jupyter notebook
+### 1. Call insertion sites: `pipeline/map_junction_insertions.py`
 
-If you encounter an architecture-related error, try:
+Input: a merged (single-end) FASTQ and the reference genome FASTA.
 
-PYTHONNOUSERSITE=1 conda run -n integration_env jupyter notebook
+```bash
+python pipeline/map_junction_insertions.py \
+    --fastq sample_merged.fastq \
+    --ref genome.fasta \
+    --outdir mapped_reads \
+    --donor-seq <transposon-end sequence adjacent to the junction> \
+    --donor-side 5p \
+    --primary-only
+```
 
-Then, navigate to the location of the notebook and open CAST_TagmentationNotebook.ipynb.
+This script:
+1. Uses **cutadapt** to trim the donor sequence and drop reads that don't contain it (`--error-rate`, default 0.1; `--min-len`, default 20 bp).
+2. Maps the remaining genomic sequence with **bwa mem**, then sorts and indexes it with **samtools**. The bwa index is built automatically if it's missing.
+3. Calls one insertion coordinate per read from each alignment, taking clipping and indels into account. Alignments with MAPQ below `--min-mapq` (default 20) are skipped.
 
-## Usage
+`--donor-side 5p` means the donor sequence is at the read's 5′ end, and the insertion is called at the read's genomic 5′ end. Use `3p` if the donor is at the 3′ end.
 
-1. Modify the input parameters (e.g., input FASTA/FASTQ files, output directory) where comments specify in the notebook.
+Outputs in `--outdir`, named after the input FASTQ:
 
-2. Run each cell sequentially.
+| File | Contents |
+|---|---|
+| `<name>.trimmed.fastq` | Reads with the donor sequence removed |
+| `<name>.mapped.sorted.bam` (+ `.bai`) | Alignments to the reference |
+| `<name>.insertions.5p.tsv` | One row per read: `read_id, ref, ins0, ins1, strand, mapq, cigar, aln_start0, aln_end0_excl` |
 
-3. Output files including histograms and processed data will be saved in the specified output directory.
+`ins0` is the 0-based insertion coordinate and `ins1` is the 1-based one.
 
-## Dependencies
+### 2. Remove donor-backbone reads: `pipeline/filter_donor_backbone.sh`
 
-This notebook requires the following packages (automatically installed with the conda environment above):
+Some reads that survive trimming come from the donor plasmid's backbone (ori, resistance marker, etc.) rather than from genomic DNA. These are leftover donor plasmid or a pre-existing backbone integration, not new insertions. This step aligns the trimmed reads to the backbone and removes any read with at least `-m` bp aligned (default 30).
 
-biopython
-matplotlib
-numpy
-bbmap
-samtools
-notebook
-jupyterlab
+The donor GenBank file must have a `misc_feature` labelled **Cargo** spanning `1..N`. Everything after position N is treated as backbone. The Cargo itself is deliberately not screened, because real insertions carry Cargo sequence up to the transposon end.
+
+```bash
+pipeline/filter_donor_backbone.sh \
+    -g donor_plasmid.gb \
+    -f mapped_reads/sample_merged.trimmed.fastq \
+    -t mapped_reads/sample_merged.insertions.5p.tsv \
+    -o mapped_reads/sample_merged.insertions.5p.nobackbone.tsv
+```
+
+Run it once per FASTQ/TSV pair. The backbone index is cached next to the GenBank file and reused for later samples. Set `BWA=` or `SAMTOOLS=` to use executables that aren't on your PATH.
+
+### 3. Look at the results
+
+**Quick plot:** `scripts/plot_profile.sh` reads an insertion TSV (position in column 3, strand in column 5) and plots + and − strand counts side by side across the genome. The default bin size is 1000 bp. Use `-f` to plot each bin as a fraction of all reads.
+
+```bash
+scripts/plot_profile.sh -f mapped_reads/sample_merged.insertions.5p.nobackbone.tsv 500
+```
+
+**Detailed analysis in Python:**
+
+```python
+import pandas as pd
+from tagmentation import postprocessHelpers as hp
+from tagmentation import TsvMapHelperFunctions as tsvhp
+
+tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
+genome = hp.load_genome("genome.fasta")
+```
+
+Useful functions:
+
+| Module | Function | What it does |
+|---|---|---|
+| `TsvMapHelperFunctions` | `percent_within_distance` | % of insertions within ±N bp of a target position |
+| | `top_n_insertions_frequencies` | Most frequent insertion positions |
+| | `plot_insertion_profile` | Insertion histogram with the guide position marked |
+| | `characterize_insertion_from_position` / `_from_spacer` | Relate insertions to the guide and nearby PAMs |
+| | `extract_tsd_centered_motifs_5p` | Sequences around each insertion, centered on the target-site duplication |
+| `postprocessHelpers` | `map_guide_to_genome` | Find a guide RNA in the genome (either strand) |
+| | `extract_spacers`, `find_pam_sites_with_optional_protospacer` | Find PAMs and candidate spacers (IUPAC motifs supported) |
+| | `predict_insertion_from_spacer` | Predicted insertion site for a spacer |
+| | `extract_sequence_windows`, `at_richness`, `at_sliding_window` | Sequence context and A/T content around sites |
+| | `build_log_odds_pwm`, `score_sequence_pwm` | Build and score position weight matrices |
+
+## Legacy workflow (bbmap)
+
+`legacy/CAST_TagmentationNotebook.ipynb` is the original pipeline. It trims reads at a primer, removes donor reads by their first ten bases, maps with **bbmap**, and reports on-target insertions in a ccdB target gene. `legacy/tagmentation_app.py` is a Streamlit front end for the same steps.
+
+- **Notebook:** open it in Jupyter, edit the parameters in the "Step Three" cell (file paths, primer, donor bases, sgRNA, and the `bbmap_bin`/`samtools_bin` folders), then run every cell.
+- **Web app:** `streamlit run legacy/tagmentation_app.py`. It uses `bbmap.sh` and `samtools` from your PATH, or from the folders in `BBMAP_BIN` and `SAMTOOLS_BIN`. Output goes to `TAGMENTATION_OUTPUT_DIR` (default `tagmentation_app_output/`).
+
+## ChIP-seq pipeline
+
+`chipseq/chipseq_pipeline.sh` is a separate end-to-end pipeline for paired-end ChIP-seq with 1–3 replicates. The steps are Trim Galore → bwa → MACS3 BAMPE peak calling → consensus peaks → fold-enrichment plots. It needs extra tools that aren't in `environment.yml`:
+
+```bash
+conda install -c bioconda -c conda-forge trim-galore macs3 bedtools
+```
+
+Run `chipseq/chipseq_pipeline.sh --help` for usage.

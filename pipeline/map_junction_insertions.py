@@ -88,8 +88,6 @@ def bwa_map(ref_fa: Path, fastq: Path, bam_out: Path, cores: int):
     Map with bwa mem, then sort to BAM.
     """
     sam_tmp = bam_out.with_suffix(".sam")
-    run(["bwa", "mem", "-t", str(cores), str(ref_fa), str(fastq)], shell=False)
-    # The above prints to stdout; do it properly with redirection:
     run(f"bwa mem -t {cores} {ref_fa} {fastq} > {sam_tmp}", shell=True)
 
     # Convert + sort
