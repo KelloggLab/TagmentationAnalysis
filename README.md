@@ -4,7 +4,7 @@ Kellogg Lab tools for mapping where CRISPR-associated transposons (CAST) integra
 
 Each read starts in the transposon end (LE or RE) and reads into the flanking genomic DNA. The tools here trim off the transposon sequence, map what's left to the reference genome, and report one insertion coordinate per read. Further tools filter out donor-plasmid artifacts, plot insertion profiles, and analyze sequence preferences around insertion sites (guide/PAM position, A/T richness, target-site duplications, position weight matrices).
 
-**Documentation:** [API reference](docs/API.md) for every function in the `tagmentation` package. `docs/index.html` is a landing page version of the same links, for viewing in a browser or serving with GitHub Pages.
+**Documentation:** [API reference](docs/API.md) for every function in the `tagmentation` package, and the [architecture plan](docs/ARCHITECTURE.md) for where the repository is heading (a shared library serving E. coli tagmentation, UdiTaS and ChIP-seq). `docs/index.html` is a landing page version of the same links, for viewing in a browser or serving with GitHub Pages.
 
 ## What's in this repository
 
