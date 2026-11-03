@@ -196,7 +196,6 @@ def sliding_window(s, window):
     return [s[i:i+window] for i in range(0, len(s) - window + 1)]
 
 def at_sliding_window( seq, window ):
-    import TagmentationAnalysis.postprocessHelpers as hp
     #for window, compute at-richness and store in a list
     chunks = sliding_window( seq, window )
     at = []
