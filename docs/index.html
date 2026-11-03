@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TagmentationAnalysis Docs</title>
+<meta name="description" content="Documentation index for the Kellogg Lab TagmentationAnalysis repository.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --text: #1f2328;
+    --muted: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --code-bg: #eff2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1117;
+      --panel: #151b23;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --border: #3d444d;
+      --accent: #4493f8;
+      --code-bg: #1f2630;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1117;
+    --panel: #151b23;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --accent: #4493f8;
+    --code-bg: #1f2630;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+  }
+  pre code { background: none; padding: 0; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .bar {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 16px;
+  }
+  .bar strong { font-size: 17px; }
+  .bar .home { margin-left: auto; font-weight: 600; }
+
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 27px; margin: 0 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 32px; }
+  h2 {
+    font-size: 19px;
+    margin: 36px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    color: inherit;
+  }
+  .card:hover { border-color: var(--accent); text-decoration: none; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; color: var(--accent); }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { border-top: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; border-top: none; }
+  .table-wrap { overflow-x: auto; }
+  ol { padding-left: 22px; }
+  ol li { margin-bottom: 18px; }
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+    padding-top: 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  @media (max-width: 600px) {
+    .bar .home { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <strong>TagmentationAnalysis</strong>
+    <span style="color:var(--muted)">Kellogg Lab</span>
+    <a class="home" href="https://github.com/KelloggLab/TagmentationAnalysis">Home: KelloggLab/TagmentationAnalysis &rarr;</a>
+  </div>
+</header>
+
+<main>
+  <h1>Documentation</h1>
+  <p class="lede">
+    Tools for mapping where CRISPR-associated transposons (CAST) integrate, from tagmentation sequencing data.
+    Each read starts in the transposon end (LE or RE) and reads out into the flanking genomic DNA; these
+    tools trim the transposon sequence, map what remains, and report one insertion coordinate per read.
+  </p>
+
+  <div class="cards">
+    <a class="card" href="API.md">
+      <h3>API reference</h3>
+      <p>Every function in the <code>tagmentation</code> package: parameters, return values and coordinate conventions.</p>
+    </a>
+    <a class="card" href="https://github.com/KelloggLab/TagmentationAnalysis#readme">
+      <h3>README</h3>
+      <p>Installation, the command-line workflow and how to run the legacy notebook.</p>
+    </a>
+    <a class="card" href="https://github.com/KelloggLab/TagmentationAnalysis">
+      <h3>Repository home</h3>
+      <p>Browse the source, open an issue or clone the repository.</p>
+    </a>
+  </div>
+
+  <h2>What's in the repository</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Folder</th><th>Contents</th></tr>
+    <tr>
+      <td><code>pipeline/</code></td>
+      <td>The main workflow: <code>map_junction_insertions.py</code> calls insertion sites, then
+          <code>filter_donor_backbone.sh</code> removes donor-plasmid reads.</td>
+    </tr>
+    <tr>
+      <td><code>scripts/</code></td>
+      <td><code>plot_profile.sh</code> &mdash; quick genome-wide insertion plot with gnuplot.</td>
+    </tr>
+    <tr>
+      <td><code>tagmentation/</code></td>
+      <td>Python helper modules, documented in the <a href="API.md">API reference</a>.</td>
+    </tr>
+    <tr>
+      <td><code>legacy/</code></td>
+      <td>The older bbmap workflow: a Jupyter notebook and a Streamlit app.</td>
+    </tr>
+    <tr>
+      <td><code>chipseq/</code></td>
+      <td><code>chipseq_pipeline.sh</code> &mdash; a separate paired-end ChIP-seq pipeline.</td>
+    </tr>
+  </table>
+  </div>
+
+  <h2>Quick start</h2>
+  <ol>
+    <li>
+      Install everything, which also puts the <code>tagmentation</code> package on your Python path:
+      <pre><code>conda env create -f environment.yml
+conda activate analyze_tagmentation</code></pre>
+    </li>
+    <li>
+      Call insertion sites from a merged FASTQ:
+      <pre><code>python pipeline/map_junction_insertions.py \
+    --fastq sample_merged.fastq \
+    --ref genome.fasta \
+    --outdir mapped_reads \
+    --donor-seq &lt;transposon end sequence&gt; \
+    --donor-side 5p --primary-only</code></pre>
+    </li>
+    <li>
+      Remove reads from the donor plasmid backbone:
+      <pre><code>pipeline/filter_donor_backbone.sh \
+    -g donor_plasmid.gb \
+    -f mapped_reads/sample_merged.trimmed.fastq \
+    -t mapped_reads/sample_merged.insertions.5p.tsv \
+    -o mapped_reads/sample_merged.insertions.5p.nobackbone.tsv</code></pre>
+    </li>
+    <li>
+      Analyze the resulting TSV in Python:
+      <pre><code>import pandas as pd
+from tagmentation import postprocessHelpers as hp
+from tagmentation import TsvMapHelperFunctions as tsvhp
+
+tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
+genome = hp.load_genome("genome.fasta")
+hit = hp.map_guide_to_genome(my_guide, genome)[0]
+print(tsvhp.percent_within_distance(tsv["ins0"], hit["start"], 100))</code></pre>
+    </li>
+  </ol>
+
+  <footer>
+    Kellogg Lab &middot;
+    <a href="https://github.com/KelloggLab/TagmentationAnalysis">github.com/KelloggLab/TagmentationAnalysis</a>
+  </footer>
+</main>
+
+</body>
+</html>
