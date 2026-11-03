@@ -29,8 +29,8 @@ BIN="${2:-1000}"
 TOTAL=$(awk '$5=="+" || $5=="-"' "$INFILE" | wc -l)
 [ "$TOTAL" -gt 0 ] || TOTAL=1
 
-YLABEL="Count (+ strand up / - strand down)"
-[ "$FREQ" -eq 1 ] && YLABEL="Frequency of all reads (+ strand up / - strand down)"
+YLABEL="Count"
+[ "$FREQ" -eq 1 ] && YLABEL="Frequency of all reads"
 
 gnuplot -persist \
   -e "infile='${INFILE}'" \
@@ -44,11 +44,14 @@ set terminal qt size 1400,500
 set xlabel "Genomic position (bp)"
 set ylabel ylabel
 set style fill solid
-set boxwidth bin*0.9
+set boxwidth bin*0.4
 set format x "%.0f"
 set xzeroaxis lt -1
 
+# Both strands plotted as positive bars, offset within each bin so + and -
+# sit side by side (rather than stacked/overlapping) while keeping their
+# colors distinct.
 plot \
-  infile using (strcol(5) eq "+" ? floor($3/bin)*bin : 1/0):(freq ? 1.0/total : 1)  smooth frequency with boxes lc rgb "blue" title "+ strand", \
-  infile using (strcol(5) eq "-" ? floor($3/bin)*bin : 1/0):(freq ? -1.0/total : -1) smooth frequency with boxes lc rgb "red"  title "- strand"
+  infile using (strcol(5) eq "+" ? floor($3/bin)*bin - bin*0.2 : 1/0):(freq ? 1.0/total : 1) smooth frequency with boxes lc rgb "blue" title "+ strand", \
+  infile using (strcol(5) eq "-" ? floor($3/bin)*bin + bin*0.2 : 1/0):(freq ? 1.0/total : 1) smooth frequency with boxes lc rgb "red"  title "- strand"
 GPEOF

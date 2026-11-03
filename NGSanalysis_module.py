@@ -44,22 +44,58 @@ def write_trimmed_fastq(trimmed_reads, output_path):
             qual_str = ''.join([chr(q + 33) for q in qual])
             f.write(f"@{read_id}\n{seq}\n+\n{qual_str}\n")
 
-def extract_insertion_sites(bam_file, strand="f"):
-    result = subprocess.run(["samtools", "view", bam_file],
-                            capture_output=True, text=True, check=True)
+import subprocess
+import re
+
+CIGAR_RE = re.compile(r'(\d+)([MIDNSHP=X])')
+
+def aligned_ref_length(cigar):
+    """Number of reference bases consumed by alignment"""
+    length = 0
+    for n, op in CIGAR_RE.findall(cigar):
+        if op in "MDN=X":
+            length += int(n)
+    return length
+
+def extract_insertion_sites(samtools_bin,bam_file, isforward, tn5_offset=5):
+    result = subprocess.run(
+        [f"{samtools_bin}/samtools", "view", bam_file],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+
     positions = []
-    for line in result.stdout.strip().split("\n"):
-        if not line or line.startswith('@'):
+
+    for line in result.stdout.splitlines():
+        if not line:
             continue
-        fields = line.split("\t")      # 20250905 one base off FIX
-        pos1 = int(fields[3])          # SAM POS is 1-based
-        start0 = pos1 - 1              # convert to 0-based for fix
-        read_len = len(fields[9])
-        if strand == "f":
-            positions.append(start0)
-        else:
-            positions.append(start0 + read_len - 1)
+
+        fields = line.split("\t")
+        #print(line)
+
+        flag   = int(fields[1])
+        pos1   = int(fields[3])      # 1-based leftmost position
+        cigar  = fields[5]
+
+        start0 = pos1 - 1             # convert to 0-based
+        ref_len = aligned_ref_length(cigar)
+
+        is_reverse = flag & 16
+
+        if not is_reverse and isforward:
+            # forward strand: insertion at left edge
+            ins = start0 + tn5_offset
+            positions.append(ins)
+        elif is_reverse and not isforward:
+            # reverse strand: insertion at right edge
+            ins = start0 + ref_len - 1 - tn5_offset
+            positions.append(ins)
+
+        
+
     return positions
+
 	
 def sgRNA_finder(sgRNA, genome, PAM_len, natural_system):
     sgRNA = sgRNA.upper()
@@ -118,85 +154,91 @@ def integration_finder(insertion_idx_list, ccdb_gene, ccdb_start_site, PAM_start
     return dist_list
 
 #the main function
-def process_reads(fastq,primer,first_ten_in_donor,refgenome,bbmap_bin,samtools_bin,path_to_output_dir):
-	# 1. Trim reads by primer
-	trimmed_reads = trim_reads_by_primer(fastq, primer)
+from pathlib import Path
+import subprocess
 
-	# 2. Remove donor reads
-	donor_removed_reads = [read for read in trimmed_reads if not read[1].startswith(first_ten_in_donor)]
-	print(f"Total reads after primer trimming: {len(trimmed_reads)}")
-	print(f"Total reads after donor removal: {len(donor_removed_reads)}")
+def process_reads(fastq, primer, first_ten_in_donor, refgenome, bbmap_bin, samtools_bin, path_to_output_dir):
+    path_to_output_dir = Path(path_to_output_dir)
+    path_to_output_dir.mkdir(parents=True, exist_ok=True)
 
-	# 3. Write output FASTQ with original qualities preserved
-	trimmed_fastq = Path(f"{path_to_output_dir}/trimmed.fastq")
-	write_trimmed_fastq(donor_removed_reads, trimmed_fastq)
+    # 1. Trim reads by primer
+    trimmed_reads = trim_reads_by_primer(fastq, primer)
 
-	# 4. BBMap indexing and alignment
-	subprocess.run([f"{bbmap_bin}/bbmap.sh", f"ref={refgenome}"], check=True)
-	mapped_bam = trimmed_fastq.with_suffix(".bam")
-	subprocess.run([
-	    f"{bbmap_bin}/bbmap.sh", f"in={trimmed_fastq}", f"outm={mapped_bam}",
-	    "minid=0.9", "ambig=random"
-	    ], check=True)
+    # 2. Remove donor reads
+    donor_removed_reads = [read for read in trimmed_reads if not read[1].startswith(first_ten_in_donor)]
+    print(f"Total reads after primer trimming: {len(trimmed_reads)}")
+    print(f"Total reads after donor removal: {len(donor_removed_reads)}")
 
-	# 5. Separate forward/reverse BAM
-	forward_bam = mapped_bam.with_name(mapped_bam.stem + "_f.bam")
-	reverse_bam = mapped_bam.with_name(mapped_bam.stem + "_r.bam")
-	subprocess.run(f"{samtools_bin}/samtools view -F 0x10 -h {mapped_bam} | {samtools_bin}/samtools view -bS - > {forward_bam}", shell=True, check=True)
-	subprocess.run(f"{samtools_bin}/samtools view -f 0x10 -h {mapped_bam} | {samtools_bin}/samtools view -bS - > {reverse_bam}", shell=True, check=True)
+    # 3. Write output FASTQ
+    trimmed_fastq = path_to_output_dir / "trimmed.fastq"
+    write_trimmed_fastq(donor_removed_reads, trimmed_fastq)
 
-	# 6. Proper insertion site extraction
-	forward_insertions = extract_insertion_sites(forward_bam, samtools_bin, "f")
-	reverse_insertions = extract_insertion_sites(reverse_bam, samtools_bin, "r")
+    # 4. Index + map
+    bbmap_sh = str(Path(bbmap_bin) / "bbmap.sh")
+    subprocess.run([bbmap_sh, f"ref={refgenome}", "-Xmx20g", "ztd=1"], check=True)
 
-	return [forward_insertions,reverse_insertions]
+    mapped_bam = trimmed_fastq.with_suffix(".bam")
+    subprocess.run([
+        bbmap_sh,
+        f"in={str(trimmed_fastq)}",
+        f"outm={str(mapped_bam)}",
+        "-Xmx20g", "ztd=1",
+        "minid=0.9", "ambig=toss", "local=t", "slow=t", "tipsearch=200",
+    ], check=True)
+
+    # 5. Optional: quick sanity check that BAM has alignments
+    samtools = str(Path(samtools_bin) / "samtools")
+    n_lines = subprocess.check_output([samtools, "view", str(mapped_bam)]).splitlines()
+    print(f"Mapped alignments: {len(n_lines)}")
+
+    # 6. Extract insertion sites (prefer doing strand logic inside)
+    # If your extract_insertion_sites still takes strand="f"/"r", keep it:
+    forward_insertions = extract_insertion_sites(samtools_bin,mapped_bam,isforward=True,tn5_offset=5)
+    reverse_insertions = extract_insertion_sites(samtools_bin,mapped_bam,isforward=False,tn5_offset=5)
+
+    return [forward_insertions, reverse_insertions]
 
 
 def plot_insertion_histogram(
     forward_positions, reverse_positions,
     region_start=0, region_end=None,
     bins=100, title="Insertion Sites",
-    highlight_regions=None,
-    filename=None
+    highlight_regions=None
 ):
-
     if region_end is None:
         region_end = max(forward_positions + reverse_positions)
 
-    plt.figure(figsize=(10, 4))
-    ax = plt.gca()
+    fig, ax = plt.subplots(figsize=(10, 4))
 
-    # Plot histograms
-    ax.hist(forward_positions, bins=bins, range=(region_start, region_end),
-            alpha=0.5, label='Top Strand', color='black')
-    ax.hist(reverse_positions, bins=bins, range=(region_start, region_end),
-            alpha=0.5, label='Bottom Strand', color='grey')
+    ax.hist(
+        forward_positions, bins=bins, range=(region_start, region_end),
+        alpha=0.5, label='Top Strand', color='black'
+    )
+    ax.hist(
+        reverse_positions, bins=bins, range=(region_start, region_end),
+        alpha=0.5, label='Bottom Strand', color='grey'
+    )
 
-    # Plot horizontal red bars
     if highlight_regions:
-        ymin, _ = ax.get_ylim()
-        y = ymin - 0.01 * (ax.get_ylim()[1] - ymin)
+        ymin, ymax = ax.get_ylim()
+        y = ymin - 0.01 * (ymax - ymin)
         for region in highlight_regions:
             if len(region) == 3:
                 x_start, x_end, color = region
             else:
                 x_start, x_end = region
                 color = 'red'
-            ax.hlines(y=2, xmin=x_start, xmax=x_end, colors=color, linewidth=5)
+            ax.hlines(y=y, xmin=x_start, xmax=x_end, colors=color, linewidth=5)
 
     ax.set_xlabel("Genomic Position")
     ax.set_ylabel("Insertion Count")
     ax.set_title(title)
     ax.set_xlim(region_start, region_end)
     ax.legend()
-    plt.tight_layout()
+    fig.tight_layout()
 
-    if filename:
-        plt.savefig(filename, dpi=300)
-        plt.close()
-    else:
-        plt.show()
-    return plt
+    return fig, ax
+
 
 def plot_integration_profile(data, title="Integration Distance From PAM", xlabel="Distance From PAM (bp)", ylabel="Count", 
                    xlabel_fontsize=12, ylabel_fontsize=12, title_fontsize=14, 
