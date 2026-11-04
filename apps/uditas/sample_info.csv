@@ -1,9 +1,0 @@
-NGS_req-ID,name,Sample,description,Control sample (Y/N),Cell name_type,I7_Index_ID,index_I1,barcode_I1,I5_Index_ID,index_I2,barcode_I2,primer,genome,chr,start,end,strand,guide_1,sequence_guide_1,genome_guide_1,chr_guide_1,start_guide_1,end_guide_1,strand_guide_1,guide_2,sequence_guide_2,genome_guide_2,chr_guide_2,start_guide_2,end_guide_2,strand_guide_2,guide_3,sequence_guide_3,genome_guide_3,chr_guide_3,start_guide_3,end_guide_3,strand_guide_3,Donor (single strand; double strand),plamid_name,plasmid_sequence,genomic_background
-,FT_501_251_701,FT_501_251_701,,N,FT,,N701,ATTCCGCT,,N501,GCGATCTA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,FT_501_253_702,FT_501_253_702,,N,FT,,N702,GCATGATC,,N501,GCGATCTA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,FT_507_251_701,FT_507_251_701,,N,FT,,N701,ATTCCGCT,,N507,TACTCCTT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,FT_507_253_702,FT_507_253_702,,N,FT,,N702,GCATGATC,,N507,TACTCCTT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,293_501_251_703,293_501_251_703,,N,293,,N703,TCCGTCTT,,N501,GCGATCTA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,293_501_253_704,293_501_253_704,,N,293,,N704,AGGACTCG,,N501,GCGATCTA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,293_507_251_703,293_507_251_703,,N,293,,N703,TCCGTCTT,,N507,TACTCCTT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,293_507_253_704,293_507_253_704,,N,293,,N704,AGGACTCG,,N507,TACTCCTT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

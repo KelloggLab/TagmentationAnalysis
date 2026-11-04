@@ -34,19 +34,23 @@ reads kept of 8,475,767 assigned (9.3%)**:
 | `FT_LE` | 906,600 | 88.7% | 101,780 | 96,566 |
 | `FT_RE` | 2,964,793 | 65.8% | 249,290 | 243,122 |
 
-`Run261030_library_QC.pdf` is the shareable write-up of that finding, and
-`donor_layout.py` / `design_helper.py` exist to redesign the arm primers and a
-blocking clamp so the next library avoids it.
+`make_report.py` turns `cbcl_qc/qc_stats.json` into a shareable write-up of
+that finding, and `donor_layout.py` / `design_helper.py` exist to redesign the
+arm primers and a blocking clamp so the next library avoids it.
 
 ## Layout
 
 ```
-bcl2fastq_uditas.lsf        LSF job: BCL -> Undetermined FASTQs (16 cores, 12 h)
-sample_info.csv             Sample sheet: i7/i5 barcodes, primer, genome, guides, donor
-Run261030_library_QC.pdf    The QC report that came out of make_report.py
 cbcl_qc/                    Reads .cbcl directly, with no bcl2fastq step
 salvage/                    Output dir for extract_salvage.py (FASTQs not tracked)
 ```
+
+Only the Python is tracked here. The run's sample sheet, its bcl2fastq LSF job
+script and the generated QC PDF were removed: the i7/i5 barcodes the scripts
+actually use are hardcoded in `cbcl_qc/verify_structure.py` (`SAMPLES`), and
+the PDF regenerates from `cbcl_qc/qc_stats.json` via `make_report.py`. The
+originals are still in `~/Projects/MD_DNA/uditas_hpc` and in this repository's
+history before this commit.
 
 ### `cbcl_qc/` scripts
 
