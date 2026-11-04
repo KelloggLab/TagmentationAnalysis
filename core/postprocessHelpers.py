@@ -625,5 +625,5 @@ def find_pam_sites_with_optional_protospacer(
 
 # Moved to NovoCAST_helper.py. Re-exported here so existing notebooks that call
 # hp.predict_insertion_from_spacer(...) keep working; prefer importing it from
-# seqsuite.NovoCAST_helper in new code.
+# core.NovoCAST_helper in new code.
 from .NovoCAST_helper import predict_insertion_from_spacer  # noqa: E402,F401

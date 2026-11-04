@@ -1,4 +1,4 @@
-"""Tests for `pipeline/filter_donor_backbone.sh`.
+"""Tests for `apps/ecoli_profiling/filter_donor_backbone.sh`.
 
 The filter's job is to drop insertion calls whose read is really donor-plasmid
 backbone, while keeping calls whose read carries Cargo sequence -- because a
@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import make_fixtures  # noqa: E402
 
-FILTER = REPO / "pipeline" / "filter_donor_backbone.sh"
+FILTER = REPO / "apps" / "ecoli_profiling" / "filter_donor_backbone.sh"
 REQUIRED_TOOLS = ["cutadapt", "bwa", "samtools"]
 
 
@@ -74,7 +74,7 @@ class BackboneFilterTest(unittest.TestCase):
 
         outdir = cls.work / "out"
         proc = subprocess.run(
-            [sys.executable, str(REPO / "pipeline" / "map_junction_insertions.py"),
+            [sys.executable, str(REPO / "apps" / "ecoli_profiling" / "map_junction_insertions.py"),
              "--fastq", str(cls.work / cls.truth["reads_fastq"]),
              "--ref", str(cls.work / cls.truth["genome_fasta"]),
              "--outdir", str(outdir),

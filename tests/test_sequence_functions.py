@@ -1,4 +1,4 @@
-"""Unit tests for the pure functions in `seqsuite.postprocessHelpers`.
+"""Unit tests for the pure functions in `core.postprocessHelpers`.
 
 These are the functions the architecture plan moves first (Phase 0: into
 `ngslib/sequence.py`, `motifs.py` and `targets.py`), precisely because they do
@@ -12,7 +12,7 @@ import unittest
 
 import pandas as pd
 
-from seqsuite import postprocessHelpers as hp
+from core import postprocessHelpers as hp
 
 
 class ReverseComplementTest(unittest.TestCase):

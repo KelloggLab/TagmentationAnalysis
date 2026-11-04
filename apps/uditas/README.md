@@ -83,5 +83,5 @@ needs the raw CBCLs on the lab share. They also serve as the regression
 reference for the refactor — the ported code should reproduce these numbers.
 
 `extract_salvage.py` writes exactly the input shape
-`pipeline/map_junction_insertions.py` consumes, which is where this application
+`apps/ecoli_profiling/map_junction_insertions.py` consumes, which is where this application
 and E. coli tagmentation meet.

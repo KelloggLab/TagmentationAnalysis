@@ -12,28 +12,27 @@ Each read starts in the transposon end (LE or RE) and reads into the flanking ge
 ## What's in this repository
 
 ```
-pipeline/                       Command-line steps, run in order
-  map_junction_insertions.py      1. trim transposon end -> map -> per-read insertion TSV
-  filter_donor_backbone.sh        2. drop reads that come from the donor plasmid backbone
-scripts/
-  plot_profile.sh                 Quick genome-wide insertion plot (gnuplot)
-seqsuite/                       Python helper functions (import in your own notebooks)
+core/                           Shared functions, used across the apps
   postprocessHelpers.py           Sequence utilities: guide/PAM finding, A/T richness, spacers, PWMs
   TsvMapHelperFunctions.py        Analysis of insertion TSVs: on-target %, TSD motifs, profiles
   NovoCAST_helper.py              Predicted insertion sites for novel CAST systems
-  NGSanalysis_module.py           Functions behind the legacy bbmap workflow
+  NGSanalysis_module.py           Primer trimming and alignment wrappers
+apps/                           One folder per assay
+  ecoli_profiling/                CAST integration profiling in E. coli
+    map_junction_insertions.py       1. trim transposon end -> map -> per-read insertion TSV
+    filter_donor_backbone.sh         2. drop reads that come from the donor plasmid backbone
+    plot_profile.sh                  Quick genome-wide insertion plot (gnuplot)
+  uditas/                         UdiTaS: CBCL-level library QC and junction-read salvage
+  chipseq/
+    chipseq_pipeline.sh             Paired-end ChIP-seq pipeline
 legacy/                         Older bbmap-based workflow (still works, no longer the main path)
   CAST_TagmentationNotebook.ipynb
   tagmentation_app.py             Streamlit web front end
-chipseq/
-  chipseq_pipeline.sh             Paired-end ChIP-seq pipeline (separate from tagmentation)
-apps/
-  uditas/                         UdiTaS: CBCL-level library QC and junction-read salvage
 tests/                          Synthetic fixtures and regression tests
-environment.yml                 Conda environment with all dependencies
+environment.yml                 Conda environment with all dependencies, for every app
 ```
 
-The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and `NGSanalysis_module.py` files at the top level only forward to the copies in `seqsuite/`, and `tagmentation/` is an alias for the whole package. They're there so older notebooks that use `import TagmentationAnalysis.postprocessHelpers` or `from tagmentation import ...` keep working, and they can be deleted once those notebooks are updated.
+The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and `NGSanalysis_module.py` files at the top level only forward to the copies in `core/`, and `tagmentation/` is an alias for the whole package. They're there so older notebooks that use `import TagmentationAnalysis.postprocessHelpers` or `from tagmentation import ...` keep working, and they can be deleted once those notebooks are updated.
 
 ## Installation
 
@@ -44,7 +43,7 @@ conda env create -f environment.yml
 conda activate seqsuite
 ```
 
-This installs the command-line tools (cutadapt, bwa, samtools, gnuplot, bbmap) and the Python libraries. It also installs this folder as the `seqsuite` Python package, so `from seqsuite import postprocessHelpers` works from any directory.
+This installs the command-line tools (cutadapt, bwa, samtools, gnuplot, bbmap) and the Python libraries. It also installs this folder as the `seqsuite` Python package, so `from core import postprocessHelpers` works from any directory.
 
 **Upgrading from an older checkout:** the package used to be called
 `tagmentation`, and the conda environment `analyze_tagmentation`. If you
@@ -56,18 +55,18 @@ pip install -e . --no-deps
 ```
 
 Old imports keep working — `from tagmentation import postprocessHelpers`
-returns the same module object as `from seqsuite import postprocessHelpers`.
+returns the same module object as `from core import postprocessHelpers`.
 The local folder is still named `TagmentationAnalysis`, deliberately: notebook
 folders symlink to that path.
 
 ## Main workflow
 
-### 1. Call insertion sites: `pipeline/map_junction_insertions.py`
+### 1. Call insertion sites: `apps/ecoli_profiling/map_junction_insertions.py`
 
 Input: a merged (single-end) FASTQ and the reference genome FASTA.
 
 ```bash
-python pipeline/map_junction_insertions.py \
+python apps/ecoli_profiling/map_junction_insertions.py \
     --fastq sample_merged.fastq \
     --ref genome.fasta \
     --outdir mapped_reads \
@@ -93,14 +92,14 @@ Outputs in `--outdir`, named after the input FASTQ:
 
 `ins0` is the 0-based insertion coordinate and `ins1` is the 1-based one.
 
-### 2. Remove donor-backbone reads: `pipeline/filter_donor_backbone.sh`
+### 2. Remove donor-backbone reads: `apps/ecoli_profiling/filter_donor_backbone.sh`
 
 Some reads that survive trimming come from the donor plasmid's backbone (ori, resistance marker, etc.) rather than from genomic DNA. These are leftover donor plasmid or a pre-existing backbone integration, not new insertions. This step aligns the trimmed reads to the backbone and removes any read with at least `-m` bp aligned (default 30).
 
 The donor GenBank file must have a `misc_feature` labelled **Cargo** spanning `1..N`. Everything after position N is treated as backbone. The Cargo itself is deliberately not screened, because real insertions carry Cargo sequence up to the transposon end.
 
 ```bash
-pipeline/filter_donor_backbone.sh \
+apps/ecoli_profiling/filter_donor_backbone.sh \
     -g donor_plasmid.gb \
     -f mapped_reads/sample_merged.trimmed.fastq \
     -t mapped_reads/sample_merged.insertions.5p.tsv \
@@ -111,18 +110,18 @@ Run it once per FASTQ/TSV pair. The backbone index is cached next to the GenBank
 
 ### 3. Look at the results
 
-**Quick plot:** `scripts/plot_profile.sh` reads an insertion TSV (position in column 3, strand in column 5) and plots + and − strand counts side by side across the genome. The default bin size is 1000 bp. Use `-f` to plot each bin as a fraction of all reads.
+**Quick plot:** `apps/ecoli_profiling/plot_profile.sh` reads an insertion TSV (position in column 3, strand in column 5) and plots + and − strand counts side by side across the genome. The default bin size is 1000 bp. Use `-f` to plot each bin as a fraction of all reads.
 
 ```bash
-scripts/plot_profile.sh -f mapped_reads/sample_merged.insertions.5p.nobackbone.tsv 500
+apps/ecoli_profiling/plot_profile.sh -f mapped_reads/sample_merged.insertions.5p.nobackbone.tsv 500
 ```
 
 **Detailed analysis in Python:**
 
 ```python
 import pandas as pd
-from seqsuite import postprocessHelpers as hp
-from seqsuite import TsvMapHelperFunctions as tsvhp
+from core import postprocessHelpers as hp
+from core import TsvMapHelperFunctions as tsvhp
 
 tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
 genome = hp.load_genome("genome.fasta")
@@ -160,13 +159,13 @@ written for one specific run; see [apps/uditas/README.md](apps/uditas/README.md)
 
 ## ChIP-seq pipeline
 
-`chipseq/chipseq_pipeline.sh` is a separate end-to-end pipeline for paired-end ChIP-seq with 1–3 replicates. The steps are Trim Galore → bwa → MACS3 BAMPE peak calling → consensus peaks → fold-enrichment plots. It needs extra tools that aren't in `environment.yml`:
+`apps/chipseq/chipseq_pipeline.sh` is a separate end-to-end pipeline for paired-end ChIP-seq with 1–3 replicates. The steps are Trim Galore → bwa → MACS3 BAMPE peak calling → consensus peaks → fold-enrichment plots. It needs extra tools that aren't in `environment.yml`:
 
 ```bash
 conda install -c bioconda -c conda-forge trim-galore macs3 bedtools
 ```
 
-Run `chipseq/chipseq_pipeline.sh --help` for usage.
+Run `apps/chipseq/chipseq_pipeline.sh --help` for usage.
 
 ## Tests
 
@@ -177,10 +176,10 @@ python -m unittest discover -s tests -v
 
 175 tests, about 15 seconds, no extra dependencies. They build a synthetic
 50 kb genome and a donor plasmid, plant insertions at known positions, and
-check that `pipeline/map_junction_insertions.py` recovers every one of them and
-that `pipeline/filter_donor_backbone.sh` drops the backbone-derived ones while
+check that `apps/ecoli_profiling/map_junction_insertions.py` recovers every one of them and
+that `apps/ecoli_profiling/filter_donor_backbone.sh` drops the backbone-derived ones while
 sparing the Cargo-derived ones — plus unit tests for the helper functions in
-`seqsuite/`. A synthetic Illumina CBCL lane covers the UdiTaS readers in
+`core/`. A synthetic Illumina CBCL lane covers the UdiTaS readers in
 `apps/uditas/cbcl_qc/`, including `extract_salvage.py` end to end. The
 tagmentation end-to-end tests skip cleanly if cutadapt/bwa/samtools are not on
 PATH; the UdiTaS tests need only numpy. See [tests/README.md](tests/README.md).

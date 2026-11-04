@@ -1,12 +1,12 @@
 # API reference
 
-Functions in the `seqsuite` package. Home: [KelloggLab/seqsuite](https://github.com/KelloggLab/seqsuite)
+Functions in the `core` package. Home: [KelloggLab/seqsuite](https://github.com/KelloggLab/seqsuite)
 
 ```python
-from seqsuite import postprocessHelpers as hp
-from seqsuite import TsvMapHelperFunctions as tsvhp
-from seqsuite import NovoCAST_helper as nc
-from seqsuite import NGSanalysis_module as ngs
+from core import postprocessHelpers as hp
+from core import TsvMapHelperFunctions as tsvhp
+from core import NovoCAST_helper as nc
+from core import NGSanalysis_module as ngs
 ```
 
 ## Conventions
@@ -14,7 +14,7 @@ from seqsuite import NGSanalysis_module as ngs
 - **Coordinates are 0-based** and ranges are end-exclusive (Python slicing), unless noted.
 - **Sequences** are plain strings in the DNA alphabet. Most functions upper-case their input and treat `U` as `T`.
 - **Positions are reported on the + (top) strand** of the input sequence, even for − strand hits.
-- **"Insertion TSV"** means the file written by `pipeline/map_junction_insertions.py` (or the filtered `.nobackbone.tsv`), with columns `read_id, ref, ins0, ins1, strand, mapq, cigar, aln_start0, aln_end0_excl`. Load it with `pd.read_csv(path, sep="\t")`.
+- **"Insertion TSV"** means the file written by `apps/ecoli_profiling/map_junction_insertions.py` (or the filtered `.nobackbone.tsv`), with columns `read_id, ref, ins0, ins1, strand, mapq, cigar, aln_start0, aln_end0_excl`. Load it with `pd.read_csv(path, sep="\t")`.
 
 ---
 
@@ -169,7 +169,7 @@ Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `interveni
 
 This is a prediction from the guide alone and uses no sequencing data. For the same values measured from real insertions, use [`characterize_insertion_from_spacer`](#characterize_insertion_from_spacertsv-pam-guiderna-genome_sequence). Raises `IndexError` if the guide isn't in the genome.
 
-> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `seqsuite.NovoCAST_helper`.
+> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `core.NovoCAST_helper`.
 
 ---
 
@@ -234,7 +234,7 @@ Returns a one-row DataFrame with the same columns, or an **empty DataFrame** whe
 
 ## NGSanalysis_module (legacy)
 
-Functions behind the legacy bbmap workflow (`legacy/CAST_TagmentationNotebook.ipynb` and `legacy/tagmentation_app.py`). New analyses should use `pipeline/map_junction_insertions.py` instead.
+Functions behind the legacy bbmap workflow (`legacy/CAST_TagmentationNotebook.ipynb` and `legacy/tagmentation_app.py`). New analyses should use `apps/ecoli_profiling/map_junction_insertions.py` instead.
 
 ### `process_reads(fastq, primer, first_ten_in_donor, refgenome, bbmap_bin, samtools_bin, path_to_output_dir)`
 

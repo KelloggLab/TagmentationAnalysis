@@ -1,7 +1,7 @@
-# Backward-compatible alias: this package is now `seqsuite`.
+# Backward-compatible alias: this package is now `core`.
 # Lets older notebooks keep using "from tagmentation import postprocessHelpers".
 import sys
 
-import seqsuite
+import core
 
-sys.modules[__name__] = seqsuite
+sys.modules[__name__] = core

@@ -21,4 +21,4 @@ dependencies:
   - streamlit      # legacy web app only
   - pip
   - pip:
-      - -e .       # installs the seqsuite package from this folder
+      - -e .       # installs the core package from this folder
