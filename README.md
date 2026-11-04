@@ -158,10 +158,12 @@ conda activate analyze_tagmentation
 python -m unittest discover -s tests -v
 ```
 
-111 tests, about 18 seconds, no extra dependencies. They build a synthetic
+175 tests, about 15 seconds, no extra dependencies. They build a synthetic
 50 kb genome and a donor plasmid, plant insertions at known positions, and
 check that `pipeline/map_junction_insertions.py` recovers every one of them and
 that `pipeline/filter_donor_backbone.sh` drops the backbone-derived ones while
 sparing the Cargo-derived ones — plus unit tests for the helper functions in
-`tagmentation/`. The end-to-end tests skip cleanly if cutadapt/bwa/samtools are
-not on PATH. See [tests/README.md](tests/README.md).
+`tagmentation/`. A synthetic Illumina CBCL lane covers the UdiTaS readers in
+`apps/uditas/cbcl_qc/`, including `extract_salvage.py` end to end. The
+tagmentation end-to-end tests skip cleanly if cutadapt/bwa/samtools are not on
+PATH; the UdiTaS tests need only numpy. See [tests/README.md](tests/README.md).

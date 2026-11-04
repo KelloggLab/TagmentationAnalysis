@@ -15,13 +15,14 @@ conda activate analyze_tagmentation
 python -m unittest discover -s tests -v
 ```
 
-111 tests, about 18 seconds. Most of that is the backbone-filter file, which
+175 tests, about 15 seconds. Most of that is the backbone-filter file, which
 runs bwa once per test to keep the tests independent of each other; the pure
 unit tests finish in well under a second. `pytest tests` also works if you
 prefer it, but it is not required and is not in `environment.yml`.
 
-The end-to-end tests need `cutadapt`, `bwa`, `samtools` and `pysam`. If any are
-missing those classes **skip** rather than fail, so the rest still runs:
+The tagmentation end-to-end tests need `cutadapt`, `bwa`, `samtools` and
+`pysam`. If any are missing those classes **skip** rather than fail, so the
+rest still runs — including all of the UdiTaS tests, which need only numpy:
 
 ```
 $ PATH=/usr/bin:/bin python -m unittest discover -s tests
@@ -32,11 +33,14 @@ OK (skipped=33)
 
 | File | Tests | Covers |
 |---|--:|---|
-| `make_fixtures.py` | — | Builds the synthetic dataset. Not a test; run it directly to inspect the fixtures |
+| `make_fixtures.py` | — | Builds the tagmentation dataset. Not a test; run it directly to inspect the fixtures |
+| `make_cbcl_fixtures.py` | — | Writes a synthetic Illumina CBCL lane for the UdiTaS tests |
 | `test_sequence_functions.py` | 47 | `postprocessHelpers`: reverse complement, A/T richness, windows, guide mapping, IUPAC matching, PWMs |
 | `test_tsv_analysis.py` | 27 | `TsvMapHelperFunctions` arithmetic and `NovoCAST_helper` geometry |
 | `test_insertion_pipeline.py` | 16 | `pipeline/map_junction_insertions.py`, end to end, against planted truth |
 | `test_backbone_filter.py` | 21 | `pipeline/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
+| `test_uditas_cbcl.py` | 47 | `apps/uditas/cbcl_qc/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
+| `test_uditas_snapgene.py` | 17 | `apps/uditas/cbcl_qc/read_snapgene.py`, the hand-rolled `.dna` binary parser |
 
 ## The synthetic dataset
 
@@ -81,6 +85,61 @@ would throw away real signal. The partial row pins the `-m` threshold from
 both sides; bwa aligns those reads as `40M30S`, so 40 aligned bases is what
 the threshold is compared against.
 
+## The synthetic CBCL lane
+
+```bash
+python tests/make_cbcl_fixtures.py /tmp/cbcl
+```
+
+`apps/uditas/cbcl_qc/` reads Illumina base calls straight out of `.cbcl` files
+with no bcl2fastq step, which is exactly why it had no tests: there was no
+input to give it. This writes one.
+
+It implements the format the scripts actually parse — a header, a q-score bin
+table, a tile table, then one gzip member per tile of nibble-packed base calls,
+two per byte, with bin 0 meaning no-call. It writes only the 246 index and R2
+cycles the scripts read, not all 628 of a real run, so a lane is small and
+quick to build.
+
+31 clusters over 2 tiles, carrying reads designed to land in each of
+`extract_salvage.py`'s outcomes — kept, `adapter_too_close`, `still_donor`,
+`too_short_after_trim` — plus three reads belonging to no listed sample, and
+one read per arm whose i7 carries a single substitution so the one-mismatch
+barcode map is exercised. Three reads share one insertion site with two
+distinct UMIs, so UMI collapsing has something to collapse.
+
+That the real code reads this file at all is most of the value: the decoder,
+the quality-bin lookup, the demultiplexer and the trimming logic all run
+against it.
+
+## A real bug these tests found
+
+**`extract_salvage.py`'s still-donor check never runs on the LE arm.**
+
+The check only applies when it has at least 12 bases of donor sequence past
+the transposon end to compare a read against:
+
+```python
+tail = DONOR[arm][END_LEN[arm]:END_LEN[arm] + 20]
+if len(tail) >= 12 and mism(flank[:len(tail)], tail) <= 2:
+    s["still_donor"] += 1
+```
+
+`DONOR["RE"]` is 53 bases with `END_LEN` 11, so it supplies 20 and the check
+works. `DONOR["LE"]` is only 26 bases with `END_LEN` 19, leaving **7** — below
+the threshold, so the branch is dead and LE reads that are really residual
+donor plasmid are reported as salvaged junctions.
+
+This is consistent with the committed `salvage_summary.json` from the real run,
+where `still_donor` is 0 for all four groups.
+
+Two tests pin it: one asserts the check works on RE, and one asserts it does
+*not* on LE and that the two planted donor reads come through as `kept`.
+Extending `DONOR["LE"]` past the terminus would activate the check and should
+make the second fail. **It is recorded, not fixed** — fixing it needs the real
+LE donor sequence from the plasmid map, which is a judgement about the biology
+rather than about the code.
+
 ## A behaviour these tests changed
 
 Writing them turned up a real leak. `cutadapt -g SEQ` is unanchored and
@@ -102,6 +161,13 @@ slice as `sequence` for a minus hit; `percent_within_distance` calls `len()` so
 it rejects generators; `predict_insertion_from_spacer` only ever uses the first
 hit. These are locked in because notebooks depend on them, not because they are
 good designs.
+
+Several UdiTaS tests assert that duplicated code agrees with itself rather
+than that it is right: `rc` is copied into six files, `read_header` into four,
+`one_mismatch_map` into three, and the run's cycle layout and barcodes are
+hardcoded in each script that needs them. Until `ngslib/illumina.py` exists,
+those copies drifting apart is the realistic failure, so the tests compare them
+to each other. They are also the evidence for consolidating in the first place.
 
 `test_backbone_filter.ToolResolutionTest` is narrower than it looks: it exists
 because `find_tool` used bash 4's `${name^^}`, which is a syntax error on the
@@ -125,5 +191,8 @@ Still uncovered, roughly in order of value:
   "it runs and writes a non-empty file" would already catch a lot
 - `chipseq/chipseq_pipeline.sh` — nothing, and it should get a fixture before
   the Python port in Phase 3
-- `apps/uditas/` — nothing; `extract_salvage.py` is the one worth a fixture,
-  and it needs a synthetic CBCL writer
+- `apps/uditas/`: `make_report.py` (593 lines, PDF generation), and the
+  `verify2`–`verify5` / `donor_fraction*` / `inspect_long` diagnostics, which
+  are reporting scripts with little separable logic
+- `apps/uditas/cbcl_qc/design_helper.py` and `donor_layout.py` — pure sequence
+  arithmetic, and the easiest remaining win
