@@ -1,4 +1,4 @@
-"""Tests for `apps/uditas/cbcl_qc/read_snapgene.py`.
+"""Tests for `apps/human_profiling/read_snapgene.py`.
 
 It parses SnapGene's binary `.dna` format by hand -- a sequence of blocks, each
 a type byte, a big-endian uint32 length, and that many bytes. Block 0 holds the
@@ -17,8 +17,8 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CBCL_QC = REPO / "apps" / "uditas" / "cbcl_qc"
-sys.path.insert(0, str(CBCL_QC))
+APP = REPO / "apps" / "human_profiling"
+sys.path.insert(0, str(APP))
 
 try:
     import read_snapgene as rs
@@ -98,7 +98,7 @@ class ConversionTest(unittest.TestCase):
         src = dna_file(d / "plasmid.dna", seq or self.SEQ, features, topology)
         prefix = d / "out"
         proc = subprocess.run(
-            [sys.executable, "-I", str(CBCL_QC / "read_snapgene.py"),
+            [sys.executable, "-I", str(APP / "read_snapgene.py"),
              str(src), str(prefix)],
             capture_output=True, text=True)
         self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
@@ -172,7 +172,7 @@ class ConversionTest(unittest.TestCase):
         src = d / "broken.dna"
         src.write_bytes(block(9, b"SnapGene") + features_block([]))
         proc = subprocess.run(
-            [sys.executable, "-I", str(CBCL_QC / "read_snapgene.py"),
+            [sys.executable, "-I", str(APP / "read_snapgene.py"),
              str(src), str(d / "out")],
             capture_output=True, text=True)
         self.assertNotEqual(proc.returncode, 0)

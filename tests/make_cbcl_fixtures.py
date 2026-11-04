@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a synthetic Illumina CBCL lane, so the UdiTaS code can be tested.
 
-`apps/uditas/cbcl_qc/` reads base calls straight out of `.cbcl` files with no
+`apps/human_profiling/` reads base calls straight out of `.cbcl` files with no
 bcl2fastq step, which is the reason none of it had tests: there was no input to
 give it. This builds that input.
 
@@ -36,7 +36,7 @@ import sys
 from pathlib import Path
 
 # Cycle layout of run 261030_VH00889_534_AAJLG3JM5, which every script in
-# cbcl_qc/ hardcodes.
+# apps/human_profiling/ reads from its config.
 I1_START, I1_LEN = 302, 8
 I2_START, I2_LEN = 310, 18
 R2_START = 328

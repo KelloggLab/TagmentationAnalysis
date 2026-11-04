@@ -1,7 +1,7 @@
 """End-to-end test: does the pipeline recover insertions we planted ourselves?
 
 This is the regression anchor the architecture plan asks for. It runs the real
-`pipeline/map_junction_insertions.py` -- real cutadapt, real bwa, real samtools
+`apps/ecoli_profiling/map_junction_insertions.py` -- real cutadapt, real bwa, real samtools
 -- over the synthetic dataset from make_fixtures.py, and checks the output TSV
 against the known answer. Any refactoring that changes a called coordinate will
 fail here.
@@ -56,7 +56,7 @@ class InsertionPipelineTest(unittest.TestCase):
 
         outdir = work / "out"
         proc = subprocess.run(
-            [sys.executable, str(REPO / "pipeline" / "map_junction_insertions.py"),
+            [sys.executable, str(REPO / "apps" / "ecoli_profiling" / "map_junction_insertions.py"),
              "--fastq", str(work / cls.truth["reads_fastq"]),
              "--ref", str(work / cls.truth["genome_fasta"]),
              "--outdir", str(outdir),
@@ -176,7 +176,7 @@ class InsertionPipelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             outdir = Path(d) / "out"
             proc = subprocess.run(
-                [sys.executable, str(REPO / "pipeline" / "map_junction_insertions.py"),
+                [sys.executable, str(REPO / "apps" / "ecoli_profiling" / "map_junction_insertions.py"),
                  "--fastq", str(Path(self._tmp.name) / self.truth["reads_fastq"]),
                  "--ref", str(Path(self._tmp.name) / self.truth["genome_fasta"]),
                  "--outdir", str(outdir),
