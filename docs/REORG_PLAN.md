@@ -16,11 +16,16 @@ the move and the short list of things it did not finish.
 | `legacy/` | deleted — bbmap notebook and Streamlit app |
 | `tagmentation/` | deleted — an alias package, unused by any notebook |
 
-Each app gained a README explaining how to run its pipeline. The three
-forwarding modules at the repository root were repointed at `core/`, so the
-~75 notebook import sites under `~/Projects/analyze_tagmentation` kept working
-unchanged. All 209 tests pass with no skips in an environment that has
-cutadapt, bwa, samtools and pysam.
+Each app gained a README explaining how to run its pipeline.
+
+The three forwarding modules at the repository root were first repointed at
+`core/`, then deleted: all 86 notebook import sites were rewritten to
+`from core import ...`, across 45 files under `~/Projects/analyze_tagmentation`
+and two folders on the Desktop. Nothing depends on the `TagmentationAnalysis`
+symlinks any more.
+
+All 209 tests pass with no skips in an environment that has cutadapt, bwa,
+samtools and pysam.
 
 ## Left
 

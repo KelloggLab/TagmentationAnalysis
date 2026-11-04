@@ -24,11 +24,8 @@ tests/                          Synthetic fixtures and regression tests
 environment.yml                 Conda environment with all dependencies, for every app
 ```
 
-The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and
-`NGSanalysis_module.py` files at the top level only forward to the copies in
-`core/`. They are there so notebooks that use
-`import TagmentationAnalysis.postprocessHelpers` keep working, and they can be
-deleted once those notebooks are updated.
+That is the whole top level. Every function has exactly one definition, in
+`core/`, and every pipeline step lives with the assay it belongs to.
 
 ## The apps
 
@@ -59,15 +56,16 @@ README.
 
 **Upgrading from an older checkout:** the shared modules used to live in
 `seqsuite/`, and before that in a package called `tagmentation`. Re-run the
-editable install once so `core` resolves:
+editable install once in each environment you use, so `core` resolves:
 
 ```bash
 pip install -e . --no-deps
 ```
 
-The local folder is still named `TagmentationAnalysis`, deliberately: notebook
-folders symlink to that path, and `import TagmentationAnalysis.postprocessHelpers`
-still works.
+Notebooks import `core` directly — `from core import postprocessHelpers as hp`.
+Older notebooks that imported this folder through a `TagmentationAnalysis`
+symlink were rewritten; nothing depends on the symlinks or on the folder's name
+any more.
 
 ## Analysing results in Python
 
