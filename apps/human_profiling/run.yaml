@@ -1,6 +1,6 @@
 # UdiTaS run layout and assay parameters.
 #
-# Read by cbcl_qc/runconfig.py, which validates it; the scripts take no
+# Read by runconfig.py, which validates it; the scripts take no
 # hardcoded constants. Point them elsewhere with --config or
 # $UDITAS_RUN_CONFIG. A .json copy of this file works without PyYAML.
 

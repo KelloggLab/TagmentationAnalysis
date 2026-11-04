@@ -9,7 +9,7 @@ dependencies:
   - bwa
   - samtools
   - gnuplot
-  - bbmap          # legacy workflow only
+  - bbmap          # core.NGSanalysis_module.process_reads only
   # Python libraries
   - pysam
   - biopython
@@ -18,7 +18,6 @@ dependencies:
   - pyyaml
   - matplotlib
   - jupyterlab
-  - streamlit      # legacy web app only
   - pip
   - pip:
       - -e .       # installs the core package from this folder

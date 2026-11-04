@@ -1,4 +1,4 @@
-"""Tests for the UdiTaS CBCL readers in `apps/uditas/cbcl_qc/`.
+"""Tests for the UdiTaS CBCL readers in `apps/human_profiling/`.
 
 This code had no tests because it reads Illumina `.cbcl` files directly and
 there was no way to hand it an input. `make_cbcl_fixtures.py` writes a
@@ -6,7 +6,7 @@ synthetic lane, which makes all of it testable: the nibble decoding, the
 quality-bin mapping, the i7/i5 demultiplexing with its one-mismatch tolerance,
 and the read classification `extract_salvage.py` performs.
 
-Needs numpy, which the cbcl_qc scripts require anyway.
+Needs numpy, which the human_profiling scripts require anyway.
 """
 
 import gzip
@@ -18,9 +18,9 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CBCL_QC = REPO / "apps" / "uditas" / "cbcl_qc"
+APP = REPO / "apps" / "human_profiling"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(CBCL_QC))
+sys.path.insert(0, str(APP))
 
 import make_cbcl_fixtures as fx  # noqa: E402
 
@@ -34,7 +34,7 @@ except Exception as exc:                      # pragma: no cover
     IMPORT_ERROR = str(exc)
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import human_profiling modules: {IMPORT_ERROR}")
 class PureHelperTest(unittest.TestCase):
     """The small functions, which are also the ones duplicated the most."""
 
@@ -100,7 +100,7 @@ class PureHelperTest(unittest.TestCase):
         self.assertEqual(es.mism("ACGT", "ACGTTTTT"), 0)
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import human_profiling modules: {IMPORT_ERROR}")
 class EarliestAdapterTest(unittest.TestCase):
     """recheck_inserts.earliest_adapter, the mismatch-tolerant scan."""
 
@@ -141,7 +141,7 @@ class EarliestAdapterTest(unittest.TestCase):
         self.assertEqual([int(x) for x in got], [15, 10**6, 15])
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import human_profiling modules: {IMPORT_ERROR}")
 class CbclDecodingTest(unittest.TestCase):
     """The synthetic lane has to decode back to exactly what went in, or
     nothing built on top of it means anything."""
@@ -238,7 +238,7 @@ class CbclDecodingTest(unittest.TestCase):
         self.assertEqual(total - assigned, self.truth["n_unassigned"])
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import human_profiling modules: {IMPORT_ERROR}")
 class ExtractSalvageTest(unittest.TestCase):
     """extract_salvage.py end to end over the synthetic lane."""
 
@@ -249,7 +249,7 @@ class ExtractSalvageTest(unittest.TestCase):
         cls.truth = fx.build(work)
         cls.out = work / "salvage"
         proc = subprocess.run(
-            [sys.executable, "-I", str(CBCL_QC / "extract_salvage.py"),
+            [sys.executable, "-I", str(APP / "extract_salvage.py"),
              cls.truth["lane_dir"], str(cls.truth["n_tiles"]), str(cls.out)],
             capture_output=True, text=True)
         if proc.returncode != 0:
@@ -368,10 +368,10 @@ class ExtractSalvageTest(unittest.TestCase):
                          self.summary["groups"]["FT_RE"]["kept"] + 2)
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import human_profiling modules: {IMPORT_ERROR}")
 class HardcodedRunLayoutTest(unittest.TestCase):
     """The cycle layout, barcodes and arm sequences now come from
-    apps/uditas/run.yaml and apps/uditas/sample_sheet.csv, so the three
+    apps/human_profiling/run.yaml and apps/human_profiling/sample_sheet.csv, so the three
     scripts cannot disagree. What is left to check is that the config itself
     is consistent, and that each module derives from it what it used to
     hardcode."""

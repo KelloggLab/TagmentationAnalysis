@@ -4,7 +4,7 @@ Everything that used to be a module-level constant in verify_structure.py,
 recheck_inserts.py and extract_salvage.py lives here instead, so the three
 scripts cannot drift apart and so a different run needs no code edit.
 
-    cfg = load()                      # apps/uditas/run.yaml
+    cfg = load()                      # apps/human_profiling/run.yaml
     cfg = load("other_run.yaml")      # or JSON, picked by extension
 
 YAML needs PyYAML; a .json config loads on the standard library alone, which
@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_CONFIG = HERE.parent / "run.yaml"
+DEFAULT_CONFIG = HERE / "run.yaml"
 
 DNA = set("ACGT")
 
@@ -183,7 +183,7 @@ def read_sample_sheet(path: Path):
 def load(path=None) -> RunConfig:
     """Read a config, its sample sheet, and check the three agree.
 
-    path defaults to $UDITAS_RUN_CONFIG, then apps/uditas/run.yaml.
+    path defaults to $UDITAS_RUN_CONFIG, then apps/human_profiling/run.yaml.
     """
     if path is None:
         path = os.environ.get("UDITAS_RUN_CONFIG") or DEFAULT_CONFIG

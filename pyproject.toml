@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "seqsuite"
 version = "0.1.0"
-description = "Kellogg Lab tools for sequence-based assays: CAST tagmentation, UdiTaS, ChIP-seq"
+description = "Kellogg Lab tools for sequence-based assays: shared functions in core/, one app per assay"
 requires-python = ">=3.9"
 dependencies = ["biopython", "numpy", "pandas", "matplotlib", "pysam"]
 
 [tool.setuptools]
-packages = ["core", "tagmentation"]
+packages = ["core"]

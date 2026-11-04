@@ -234,7 +234,7 @@ Returns a one-row DataFrame with the same columns, or an **empty DataFrame** whe
 
 ## NGSanalysis_module (legacy)
 
-Functions behind the legacy bbmap workflow (`legacy/CAST_TagmentationNotebook.ipynb` and `legacy/tagmentation_app.py`). New analyses should use `apps/ecoli_profiling/map_junction_insertions.py` instead.
+Functions behind the older bbmap workflow. The notebook and Streamlit app that drove them (`legacy/`) were removed from the repository; these functions stay because notebooks still import them. New analyses should use `apps/ecoli_profiling/map_junction_insertions.py` instead.
 
 ### `process_reads(fastq, primer, first_ten_in_donor, refgenome, bbmap_bin, samtools_bin, path_to_output_dir)`
 
@@ -290,7 +290,7 @@ Keeps insertions inside the target gene and converts each to a signed distance f
 
 Overlaid histograms of top- and bottom-strand insertions. `region_end` defaults to the largest position. `highlight_regions` is a list of `(start, end)` or `(start, end, color)` drawn as horizontal bars under the axis, for marking the guide and PAM. Saves to `filename` when given (300 dpi).
 
-Returns `(fig, ax)`. In Streamlit, pass the figure: `st.pyplot(result[0])`.
+Returns `(fig, ax)`.
 
 ### `plot_integration_profile(data, title=..., xlabel=..., ylabel=..., xlim=(20, 100), filename=None, ...)`
 
@@ -298,4 +298,4 @@ Histogram of insertion distances from the PAM, i.e. the output of `integration_f
 
 ### `save_to_temp(uploadedFile, tmpdir)`
 
-Writes an uploaded file object (from Streamlit) to a temporary file in `tmpdir` and returns its path, so command-line tools can read it. Creates `tmpdir` if needed. The suffix is always `.fasta`, whatever the upload was.
+Writes an uploaded file object to a temporary file in `tmpdir` and returns its path, so command-line tools can read it. Creates `tmpdir` if needed. The suffix is always `.fasta`, whatever the upload was.

@@ -130,7 +130,7 @@
 <main>
   <h1>Documentation</h1>
   <p class="lede">
-    Tools for mapping where CRISPR-associated transposons (CAST) integrate, from tagmentation sequencing data.
+    Shared functions in <code>core/</code>, and one folder per assay under <code>apps/</code>: E.&nbsp;coli integration profiling, UdiTaS in human cells, and ChIP-seq.
     Each read starts in the transposon end (LE or RE) and reads out into the flanking genomic DNA; these
     tools trim the transposon sequence, map what remains, and report one insertion coordinate per read.
   </p>
@@ -138,15 +138,15 @@
   <div class="cards">
     <a class="card" href="API.md">
       <h3>API reference</h3>
-      <p>Every function in the <code>tagmentation</code> package: parameters, return values and coordinate conventions.</p>
+      <p>Every function in <code>core/</code>: parameters, return values and coordinate conventions.</p>
     </a>
     <a class="card" href="ARCHITECTURE.md">
-      <h3>Architecture plan</h3>
-      <p>Where this is going: a shared library with per-application folders for E.&nbsp;coli tagmentation, UdiTaS and ChIP-seq.</p>
+      <h3>Repository layout</h3>
+      <p>How the repository is organised: shared functions in <code>core/</code>, one folder per assay under <code>apps/</code>.</p>
     </a>
     <a class="card" href="https://github.com/KelloggLab/seqsuite#readme">
       <h3>README</h3>
-      <p>Installation, the command-line workflow and how to run the legacy notebook.</p>
+      <p>Installation, the repository layout and the shared functions in <code>core/</code>.</p>
     </a>
     <a class="card" href="https://github.com/KelloggLab/seqsuite">
       <h3>Repository home</h3>
@@ -169,16 +169,12 @@
           <code>plot_profile.sh</code> plots the profile with gnuplot.</td>
     </tr>
     <tr>
-      <td><code>apps/uditas/</code></td>
+      <td><code>apps/human_profiling/</code></td>
       <td>UdiTaS in human cells: CBCL-level library QC and junction-read salvage.</td>
     </tr>
     <tr>
       <td><code>apps/chipseq/</code></td>
       <td><code>chipseq_pipeline.sh</code> &mdash; paired-end ChIP-seq.</td>
-    </tr>
-    <tr>
-      <td><code>legacy/</code></td>
-      <td>The older bbmap workflow: a Jupyter notebook and a Streamlit app.</td>
     </tr>
   </table>
   </div>

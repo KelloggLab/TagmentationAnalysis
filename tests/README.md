@@ -39,8 +39,8 @@ OK (skipped=33)
 | `test_tsv_analysis.py` | 27 | `TsvMapHelperFunctions` arithmetic and `NovoCAST_helper` geometry |
 | `test_insertion_pipeline.py` | 16 | `apps/ecoli_profiling/map_junction_insertions.py`, end to end, against planted truth |
 | `test_backbone_filter.py` | 21 | `apps/ecoli_profiling/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
-| `test_uditas_cbcl.py` | 47 | `apps/uditas/cbcl_qc/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
-| `test_uditas_snapgene.py` | 17 | `apps/uditas/cbcl_qc/read_snapgene.py`, the hand-rolled `.dna` binary parser |
+| `test_uditas_cbcl.py` | 47 | `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
+| `test_uditas_snapgene.py` | 17 | `apps/human_profiling/read_snapgene.py`, the hand-rolled `.dna` binary parser |
 
 ## The synthetic dataset
 
@@ -91,7 +91,7 @@ the threshold is compared against.
 python tests/make_cbcl_fixtures.py /tmp/cbcl
 ```
 
-`apps/uditas/cbcl_qc/` reads Illumina base calls straight out of `.cbcl` files
+`apps/human_profiling/` reads Illumina base calls straight out of `.cbcl` files
 with no bcl2fastq step, which is exactly why it had no tests: there was no
 input to give it. This writes one.
 
@@ -191,7 +191,7 @@ Still uncovered, roughly in order of value:
   "it runs and writes a non-empty file" would already catch a lot
 - `apps/chipseq/chipseq_pipeline.sh` — nothing, and it should get a fixture before
   the Python port in Phase 3
-- `apps/uditas/` is now fully covered: the eleven one-run diagnostic and
+- `apps/human_profiling/` is now fully covered: the eleven one-run diagnostic and
   reporting scripts were deleted rather than tested, and the four that remain
   (`verify_structure`, `recheck_inserts`, `extract_salvage`, `read_snapgene`)
   all have tests here

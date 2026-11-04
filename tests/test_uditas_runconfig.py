@@ -1,11 +1,11 @@
-"""Tests for apps/uditas/cbcl_qc/runconfig.py.
+"""Tests for apps/human_profiling/runconfig.py.
 
 The config is now the single source of the cycle layout, the sample barcodes
 and the LE/RE arm sequences, so a bad config is the one way the three CBCL
 scripts can go wrong together. These tests write small configs to a temporary
 directory and check that the loader rejects the inconsistent ones.
 
-They also pin the real apps/uditas/run.yaml, because it is the record of how
+They also pin the real apps/human_profiling/run.yaml, because it is the record of how
 run 261030 was processed.
 """
 import json
@@ -15,8 +15,8 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CBCL_QC = REPO / "apps" / "uditas" / "cbcl_qc"
-sys.path.insert(0, str(CBCL_QC))
+APP = REPO / "apps" / "human_profiling"
+sys.path.insert(0, str(APP))
 
 IMPORT_ERROR = None
 try:
