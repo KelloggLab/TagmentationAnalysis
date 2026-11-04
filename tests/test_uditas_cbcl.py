@@ -370,9 +370,11 @@ class ExtractSalvageTest(unittest.TestCase):
 
 @unittest.skipIf(IMPORT_ERROR, f"cannot import cbcl_qc modules: {IMPORT_ERROR}")
 class HardcodedRunLayoutTest(unittest.TestCase):
-    """The cycle layout and barcodes are hardcoded in several files. The
-    architecture plan moves them into the sample sheet; until then, the copies
-    must agree, because the scripts are run against the same data."""
+    """The cycle layout, barcodes and arm sequences now come from
+    apps/uditas/run.yaml and apps/uditas/sample_sheet.csv, so the three
+    scripts cannot disagree. What is left to check is that the config itself
+    is consistent, and that each module derives from it what it used to
+    hardcode."""
 
     def test_cycle_layout_agrees_across_modules(self):
         for mod in (vs, ri):
@@ -402,10 +404,18 @@ class HardcodedRunLayoutTest(unittest.TestCase):
         self.assertEqual(len(combo), len(es.SAMPLES))
 
     def test_primers_agree_between_modules(self):
-        """extract_salvage keys primers by arm, verify_structure by the primer
-        number in the sample name. Same two sequences, two spellings."""
-        self.assertEqual(es.PRIMER["RE"], vs.PRIMERS["251"])
-        self.assertEqual(es.PRIMER["LE"], vs.PRIMERS["253"])
+        """Both key primers by arm now; verify_structure used to key them by
+        the primer number in the library name ("251"/"253")."""
+        self.assertEqual(es.PRIMER, vs.PRIMERS)
+
+    def test_all_three_modules_share_one_config_object(self):
+        """Not merely equal values -- the same file, loaded once per module."""
+        self.assertEqual(es.CFG.source, ri.CFG.source)
+        self.assertEqual(es.CFG.source, vs.CFG.source)
+        self.assertEqual(es.CFG.run_id, vs.CFG.run_id)
+
+    def test_every_library_maps_to_a_known_arm(self):
+        self.assertEqual(set(vs.ARM_OF.values()), set(es.PRIMER))
 
     def test_recheck_primer_lengths_match_the_sequences(self):
         self.assertEqual(ri.PRIMER["RE"], len(es.PRIMER["RE"]))

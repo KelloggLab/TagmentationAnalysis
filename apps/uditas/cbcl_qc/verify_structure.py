@@ -7,6 +7,7 @@ I2 310-327, R2 328-628.
 usage: python -I verify_structure.py <BaseCalls/L001> [ntiles] [n_r2_cycles]
 """
 import gzip
+import os
 import struct
 import sys
 from collections import Counter
@@ -15,23 +16,26 @@ import numpy as np
 
 BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
 
-I1_START, I1_LEN = 302, 8
-I2_START, I2_LEN = 310, 18
-R2_START = 328
-UMI_LEN = 10
+# -I drops the script's directory from sys.path; add just that one back.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-SAMPLES = [
-    ("FT_501_251_701", "TAGATCGC", "AGCGGAAT"),
-    ("FT_501_253_702", "TAGATCGC", "GATCATGC"),
-    ("FT_507_251_701", "AAGGAGTA", "AGCGGAAT"),
-    ("FT_507_253_702", "AAGGAGTA", "GATCATGC"),
-    ("293_501_251_703", "TAGATCGC", "AAGACGGA"),
-    ("293_501_253_704", "TAGATCGC", "CGAGTCCT"),
-    ("293_507_251_703", "AAGGAGTA", "AAGACGGA"),
-    ("293_507_253_704", "AAGGAGTA", "CGAGTCCT"),
-]
-# 3' target-specific portion of each LE/RE PCR primer
-PRIMERS = {"251": "AGCTGACGCAAGAATGAGGGT", "253": "GCATAAGCTTGCCGTTGCGG"}
+import runconfig  # noqa: E402
+
+CFG = runconfig.load()
+
+I1_START, I1_LEN = CFG.cycles.i1_start, CFG.cycles.i1_len
+I2_START, I2_LEN = CFG.cycles.i2_start, CFG.cycles.i2_len
+R2_START = CFG.cycles.r2_start
+UMI_LEN = CFG.cycles.umi_len
+
+# (library, i5, i7), the library name being how this script labels its output.
+SAMPLES = [(s.library, s.i5, s.i7) for s in CFG.samples]
+# 3' target-specific portion of each LE/RE PCR primer, keyed by arm. This used
+# to be keyed by the primer number in the library name ("251"/"253"); the arm
+# is what it always meant.
+PRIMERS = {name: a.primer for name, a in CFG.arms.items()}
+# The arm each library was amplified with, for labelling.
+ARM_OF = {s.library: s.arm for s in CFG.samples}
 
 
 def rc(s):

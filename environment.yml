@@ -15,6 +15,7 @@ dependencies:
   - biopython
   - numpy
   - pandas
+  - pyyaml
   - matplotlib
   - jupyterlab
   - streamlit      # legacy web app only

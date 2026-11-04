@@ -19,34 +19,35 @@ import numpy as np
 
 BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
 
-I1_START, I1_LEN = 302, 8
-I2_START, I2_LEN = 310, 18
-R2_START, N_R2 = 328, 220
-UMI_LEN = 10
+# -I drops the script's directory from sys.path; add just that one back.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# 293T and FT are the two biological samples; 501/507 are index pairs of the
-# same sample, so they pool. 251 reads out of the RE end, 253 out of the LE end.
-SAMPLES = [
-    ("FT", "RE", "TAGATCGC", "AGCGGAAT"),
-    ("FT", "LE", "TAGATCGC", "GATCATGC"),
-    ("FT", "RE", "AAGGAGTA", "AGCGGAAT"),
-    ("FT", "LE", "AAGGAGTA", "GATCATGC"),
-    ("293T", "RE", "TAGATCGC", "AAGACGGA"),
-    ("293T", "LE", "TAGATCGC", "CGAGTCCT"),
-    ("293T", "RE", "AAGGAGTA", "AAGACGGA"),
-    ("293T", "LE", "AAGGAGTA", "CGAGTCCT"),
-]
-PRIMER = {"RE": "AGCTGACGCAAGAATGAGGGT", "LE": "GCATAAGCTTGCCGTTGCGG"}
+import runconfig  # noqa: E402
+
+CFG = runconfig.load()
+
+I1_START, I1_LEN = CFG.cycles.i1_start, CFG.cycles.i1_len
+I2_START, I2_LEN = CFG.cycles.i2_start, CFG.cycles.i2_len
+R2_START, N_R2 = CFG.cycles.r2_start, CFG.cycles.r2_len
+UMI_LEN = CFG.cycles.umi_len
+
+# 293T and FT are the two biological samples; the two i5 indices are index
+# pairs of the same sample, so they pool. One i7 reads out of the RE end, the
+# other out of the LE end.
+SAMPLES = [(s.sample, s.arm, s.i5, s.i7) for s in CFG.samples]
+PRIMER = {name: a.primer for name, a in CFG.arms.items()}
 # Bases of transposon end between the primer's 3' end and the terminus,
 # measured as the point where per-position agreement falls away.
-END_LEN = {"RE": 11, "LE": 19}
-DONOR = {
-    "RE": "TGTAGTGTTGTTGACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGT",
-    "LE": "CAAAGTTATGGGTAAAGTCACAATCC",
-}
-ME = "AGATGTGTATAAGAGACAG"
-MIN_FLANK = 40
-SITE_KEY = 40
+END_LEN = {name: a.end_len for name, a in CFG.arms.items()}
+DONOR = {name: a.donor for name, a in CFG.arms.items()}
+ME = CFG.mosaic_end
+MIN_FLANK = CFG.min_flank
+SITE_KEY = CFG.site_key
+
+# How much of the donor past the terminus to compare a flank against. The
+# comparison only runs on arms where there is enough of it; see
+# runconfig.Arm.still_donor_active.
+STILL_DONOR_PROBE = 20
 
 
 def rc(s):
@@ -170,8 +171,9 @@ def main():
                 s["too_short_after_trim"] += 1
                 continue
             # Still donor sequence past the terminus? Then it is not a junction.
-            tail = DONOR[arm][END_LEN[arm]:END_LEN[arm] + 20]
-            if len(tail) >= 12 and mism(flank[:len(tail)], tail) <= 2:
+            spec = CFG.arm(arm)
+            tail = spec.donor_past_terminus[:STILL_DONOR_PROBE]
+            if spec.still_donor_active and mism(flank[:len(tail)], tail) <= 2:
                 s["still_donor"] += 1
                 continue
 

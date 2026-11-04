@@ -11,6 +11,7 @@ usage: python3 -I recheck_inserts.py <BaseCalls/L001> <ntiles> <out.json>
 """
 import gzip
 import json
+import os
 import struct
 import sys
 from collections import Counter
@@ -18,19 +19,24 @@ from collections import Counter
 import numpy as np
 
 BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
-I1_START, I1_LEN = 302, 8
-I2_START, I2_LEN = 310, 18
-R2_START, N_R2 = 328, 200
-UMI_LEN = 10
 
-SAMPLES = [
-    ("FT", "RE", "TAGATCGC", "AGCGGAAT"), ("FT", "LE", "TAGATCGC", "GATCATGC"),
-    ("FT", "RE", "AAGGAGTA", "AGCGGAAT"), ("FT", "LE", "AAGGAGTA", "GATCATGC"),
-    ("293T", "RE", "TAGATCGC", "AAGACGGA"), ("293T", "LE", "TAGATCGC", "CGAGTCCT"),
-    ("293T", "RE", "AAGGAGTA", "AAGACGGA"), ("293T", "LE", "AAGGAGTA", "CGAGTCCT"),
-]
-PRIMER = {"RE": 21, "LE": 20}
-ME = "AGATGTGTATAAGAGACAG"
+# -I drops the script's directory from sys.path; add just that one back.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import runconfig  # noqa: E402
+
+CFG = runconfig.load()
+
+I1_START, I1_LEN = CFG.cycles.i1_start, CFG.cycles.i1_len
+I2_START, I2_LEN = CFG.cycles.i2_start, CFG.cycles.i2_len
+R2_START, N_R2 = CFG.cycles.r2_start, CFG.cycles.r2_len
+UMI_LEN = CFG.cycles.umi_len
+
+SAMPLES = [(s.sample, s.arm, s.i5, s.i7) for s in CFG.samples]
+# Primer *lengths* here, not sequences: this script only needs to know where
+# the insert starts. Derived, so it cannot disagree with the sequences.
+PRIMER = {name: len(a.primer) for name, a in CFG.arms.items()}
+ME = CFG.mosaic_end
 
 
 def rc(s):
