@@ -24,6 +24,7 @@ legacy/                         Older bbmap-based workflow (still works, no long
   tagmentation_app.py             Streamlit web front end
 chipseq/
   chipseq_pipeline.sh             Paired-end ChIP-seq pipeline (separate from tagmentation)
+tests/                          Synthetic fixtures and regression tests
 environment.yml                 Conda environment with all dependencies
 ```
 
@@ -139,3 +140,17 @@ conda install -c bioconda -c conda-forge trim-galore macs3 bedtools
 ```
 
 Run `chipseq/chipseq_pipeline.sh --help` for usage.
+
+## Tests
+
+```bash
+conda activate analyze_tagmentation
+python -m unittest discover -s tests -v
+```
+
+90 tests, about 3 seconds, no extra dependencies. They build a synthetic 50 kb
+genome with insertions planted at known positions and check that
+`pipeline/map_junction_insertions.py` recovers every one of them, plus unit
+tests for the helper functions in `tagmentation/`. The end-to-end tests skip
+cleanly if cutadapt/bwa/samtools are not on PATH. See
+[tests/README.md](tests/README.md).
