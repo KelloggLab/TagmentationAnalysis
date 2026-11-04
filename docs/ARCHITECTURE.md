@@ -38,22 +38,25 @@ The two profiling apps meet at one file format: `human_profiling`'s
 `extract_salvage.py` writes exactly the input shape `ecoli_profiling`'s
 `map_junction_insertions.py` consumes.
 
-## Compatibility
+## How notebooks import this
 
-Three forwarding modules sit at the repository root — `postprocessHelpers.py`,
-`TsvMapHelperFunctions.py` and `NGSanalysis_module.py` — each eight lines,
-each re-exporting its namesake from `core/`.
+Through the installed package, from any directory:
 
-They exist because the lab's notebooks reach this repository through a symlink
-named `TagmentationAnalysis` and import it as a package:
+    from core import postprocessHelpers as hp
+    from core import TsvMapHelperFunctions as tsvhp
 
-    import TagmentationAnalysis.postprocessHelpers as helper
-    from TagmentationAnalysis import TsvMapHelperFunctions as tsvhp
+An editable install (`pip install -e . --no-deps`) is needed once per
+environment. Earlier, the lab's notebooks instead reached this repository
+through a symlink named `TagmentationAnalysis` and imported it as a package,
+which three eight-line forwarding modules at the repository root served. All
+86 of those import sites, across 45 notebooks and scripts under
+`~/Projects/analyze_tagmentation` and two folders on the Desktop, were
+rewritten to the form above, and the forwarders were deleted. Nothing now
+depends on the symlinks or on this folder's name.
 
-There are about 75 such import sites across ~30 notebooks under
-`~/Projects/analyze_tagmentation`. The shims cost 24 lines and keep every one
-of them working across any rearrangement of `core/`. The local folder stays
-named `TagmentationAnalysis` for the same reason.
+One wrinkle worth knowing: `core` is a generic top-level import name. If an
+environment ever acquires another package called `core`, whichever is found
+first on `sys.path` wins. Nothing in the current environments collides.
 
 ## What has not been done
 
