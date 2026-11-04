@@ -1,0 +1,17 @@
+# Sequencing data and anything regenerable from it. The raw run lives on the
+# lab share; only the small JSON/PDF summaries above are tracked.
+*.fastq
+*.fastq.gz
+*.fq.gz
+*.bam
+*.bam.bai
+*.sam
+*.dna
+*.fasta
+*.fa
+*.fai
+__pycache__/
+*.pyc
+# LSF job output
+*.out
+*.err

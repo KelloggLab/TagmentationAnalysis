@@ -24,6 +24,8 @@ legacy/                         Older bbmap-based workflow (still works, no long
   tagmentation_app.py             Streamlit web front end
 chipseq/
   chipseq_pipeline.sh             Paired-end ChIP-seq pipeline (separate from tagmentation)
+apps/
+  uditas/                         UdiTaS: CBCL-level library QC and junction-read salvage
 environment.yml                 Conda environment with all dependencies
 ```
 
@@ -129,6 +131,14 @@ Useful functions ([full API reference](docs/API.md)):
 
 - **Notebook:** open it in Jupyter, edit the parameters in the "Step Three" cell (file paths, primer, donor bases, sgRNA, and the `bbmap_bin`/`samtools_bin` folders), then run every cell.
 - **Web app:** `streamlit run legacy/tagmentation_app.py`. It uses `bbmap.sh` and `samtools` from your PATH, or from the folders in `BBMAP_BIN` and `SAMTOOLS_BIN`. Output goes to `TAGMENTATION_OUTPUT_DIR` (default `tagmentation_app_output/`).
+
+## UdiTaS
+
+`apps/uditas/` holds the UdiTaS (UniDirectional Targeted Sequencing) work for
+CAST insertion outcomes in human cells. It reads Illumina `.cbcl` files
+directly, with no bcl2fastq step, to check library structure and to salvage
+junction reads from a donor-dominated run. It is currently an as-is import,
+written for one specific run; see [apps/uditas/README.md](apps/uditas/README.md).
 
 ## ChIP-seq pipeline
 
