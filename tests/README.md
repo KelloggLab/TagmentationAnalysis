@@ -39,8 +39,8 @@ OK (skipped=33)
 | `test_tsv_analysis.py` | 27 | `TsvMapHelperFunctions` arithmetic and `NovoCAST_helper` geometry |
 | `test_insertion_pipeline.py` | 16 | `apps/ecoli_profiling/map_junction_insertions.py`, end to end, against planted truth |
 | `test_backbone_filter.py` | 21 | `apps/ecoli_profiling/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
-| `test_uditas_cbcl.py` | 47 | `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
-| `test_uditas_snapgene.py` | 17 | `apps/human_profiling/read_snapgene.py`, the hand-rolled `.dna` binary parser |
+| `test_uditas_cbcl.py` | 51 | `core.illumina` and `core.barcodes`, plus `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
+| `test_core_snapgene.py` | 17 | `core/snapgene.py`, the hand-rolled `.dna` binary parser |
 
 ## The synthetic dataset
 
@@ -162,6 +162,11 @@ it rejects generators; `predict_insertion_from_spacer` only ever uses the first
 hit. These are locked in because notebooks depend on them, not because they are
 good designs.
 
+The CBCL reader and the barcode helpers are no longer duplicated; the tests
+that used to check the three copies agreed now assert they are one object, and
+two tests hold `core.illumina`'s whole-file and per-tile readers to the same
+bytes. What remains of that pattern:
+
 Several UdiTaS tests assert that duplicated code agrees with itself rather
 than that it is right: `rc` is copied into six files, `read_header` into four,
 `one_mismatch_map` into three, and the run's cycle layout and barcodes are
@@ -189,9 +194,9 @@ Still uncovered, roughly in order of value:
   the ignored `PAM` argument and the unsorted PAM range noted in `docs/API.md`
 - `apps/ecoli_profiling/plot_profile.sh` and the plotting functions — hard to assert on, but
   "it runs and writes a non-empty file" would already catch a lot
-- `apps/chipseq/chipseq_pipeline.sh` — nothing, and it should get a fixture before
-  the Python port in Phase 3
-- `apps/human_profiling/` is now fully covered: the eleven one-run diagnostic and
-  reporting scripts were deleted rather than tested, and the four that remain
-  (`verify_structure`, `recheck_inserts`, `extract_salvage`, `read_snapgene`)
-  all have tests here
+- `apps/chipseq/chipseq_pipeline.sh` — nothing at all, and it should get a
+  fixture before it is relied on for a figure
+- `apps/human_profiling/` is fully covered: the eleven one-run diagnostic and
+  reporting scripts were deleted rather than tested, and the three that remain
+  (`verify_structure`, `recheck_inserts`, `extract_salvage`) all have tests
+  here, as do `core.illumina`, `core.barcodes` and `core.snapgene`

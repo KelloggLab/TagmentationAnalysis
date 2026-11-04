@@ -4,7 +4,7 @@ The format is a sequence of blocks: one type byte, a big-endian uint32 length,
 then that many bytes. Block 0 holds the sequence (after one flags byte) and
 block 10 holds the features as XML.
 
-usage: python3 -I read_snapgene.py <in.dna> <out_prefix>
+usage: python3 -I core/snapgene.py <in.dna> <out_prefix>
 """
 import struct
 import sys

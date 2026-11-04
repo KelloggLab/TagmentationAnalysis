@@ -6,20 +6,20 @@ I2 310-327, R2 328-628.
 
 usage: python -I verify_structure.py <BaseCalls/L001> [ntiles] [n_r2_cycles]
 """
-import gzip
 import os
-import struct
 import sys
 from collections import Counter
 
-import numpy as np
-
-BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
-
-# -I drops the script's directory from sys.path; add just that one back.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# -I drops the script's directory from sys.path; add it back so `runconfig`
+# resolves, plus the repository root so `core` does too, with or without an
+# editable install.
+sys.path.insert(0, HERE)
+sys.path.insert(1, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import runconfig  # noqa: E402
+from core.barcodes import one_mismatch_map, rc  # noqa: E402
+from core.illumina import read_tiles  # noqa: E402
 
 CFG = runconfig.load()
 
@@ -38,67 +38,14 @@ PRIMERS = {name: a.primer for name, a in CFG.arms.items()}
 ARM_OF = {s.library: s.arm for s in CFG.samples}
 
 
-def rc(s):
-    return s.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
-
-
-def read_header(f):
-    _ver, header_size, _bb, _bq, nbins = struct.unpack("<HIBBI", f.read(12))
-    f.read(8 * nbins)
-    (ntiles,) = struct.unpack("<I", f.read(4))
-    tiles = [struct.unpack("<IIII", f.read(16)) for _ in range(ntiles)]
-    return header_size, tiles
-
-
-def decode_cycle(path, ntiles):
-    with open(path, "rb") as f:
-        header_size, tiles = read_header(f)
-        f.seek(header_size)
-        out = []
-        for _tile, nclust, _usize, csize in tiles[:ntiles]:
-            raw = np.frombuffer(gzip.decompress(f.read(csize)), dtype=np.uint8)
-            nib = np.empty(raw.size * 2, dtype=np.uint8)
-            nib[0::2] = raw & 0x0F
-            nib[1::2] = raw >> 4
-            nib = nib[:nclust]
-            seq = BASES[nib & 0x3].copy()
-            seq[(nib >> 2) == 0] = ord("N")
-            out.append(seq)
-    return np.concatenate(out)
-
-
-def read_block(lane_dir, start, length, ntiles):
-    return np.stack(
-        [decode_cycle(f"{lane_dir}/C{c}.1/L001_1.cbcl", ntiles)
-         for c in range(start, start + length)], axis=1)
-
-
-def one_mismatch_map(barcodes):
-    """barcode variant -> canonical barcode, dropping ambiguous variants."""
-    exact = set(barcodes)
-    m = {bc: bc for bc in barcodes}
-    ambiguous = set()
-    for bc in barcodes:
-        for i in range(len(bc)):
-            for b in "ACGTN":
-                v = bc[:i] + b + bc[i + 1:]
-                if v in m and m[v] != bc:
-                    ambiguous.add(v)
-                else:
-                    m.setdefault(v, bc)
-    for v in ambiguous - exact:
-        m.pop(v, None)
-    return m
-
-
 def main():
     lane_dir = sys.argv[1]
     ntiles = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     n_r2 = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 
-    i1 = read_block(lane_dir, I1_START, I1_LEN, ntiles)
-    i2 = read_block(lane_dir, I2_START, I2_LEN, ntiles)
-    r2 = read_block(lane_dir, R2_START, n_r2, ntiles)
+    i1, _ = read_tiles(lane_dir, I1_START, I1_LEN, ntiles)
+    i2, _ = read_tiles(lane_dir, I2_START, I2_LEN, ntiles)
+    r2, _ = read_tiles(lane_dir, R2_START, n_r2, ntiles)
     n = i1.shape[0]
     print(f"clusters: {n}   R2 cycles decoded: {n_r2}\n")
 
@@ -125,9 +72,8 @@ def main():
     for name, _, _ in SAMPLES:
         c = per_sample[name]
         tot = sum(c.values())
-        primer = name.split("_")[2]
-        print(f"--- {name}  ({tot} reads, primer {primer} "
-              f"{'RE' if primer == '251' else 'LE'})")
+        arm = ARM_OF[name]
+        print(f"--- {name}  ({tot} reads, {arm} arm)")
         if not tot:
             print("    none\n")
             continue
@@ -147,7 +93,7 @@ def main():
                 break
             const_len += 1
         print(f"    constant prefix: {const_len} nt -> {cons[:const_len]}")
-        pr = PRIMERS[primer]
+        pr = PRIMERS[arm]
         print(f"    primer 3' end:   ...{pr[-12:]}  (primer in read? "
               f"{'yes' if pr[-12:] in cons else 'no'})\n")
 
