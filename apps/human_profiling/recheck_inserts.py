@@ -9,21 +9,23 @@ hit. The resulting insert length is the honest one.
 
 usage: python3 -I recheck_inserts.py <BaseCalls/L001> <ntiles> <out.json>
 """
-import gzip
 import json
 import os
-import struct
 import sys
 from collections import Counter
 
 import numpy as np
 
-BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
-
-# -I drops the script's directory from sys.path; add just that one back.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# -I drops the script's directory from sys.path; add it back so `runconfig`
+# resolves, plus the repository root so `core` does too, with or without an
+# editable install.
+sys.path.insert(0, HERE)
+sys.path.insert(1, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import runconfig  # noqa: E402
+from core.barcodes import one_mismatch_map, rc  # noqa: E402
+from core.illumina import read_tile  # noqa: E402
 
 CFG = runconfig.load()
 
@@ -39,60 +41,11 @@ PRIMER = {name: len(a.primer) for name, a in CFG.arms.items()}
 ME = CFG.mosaic_end
 
 
-def rc(s):
-    return s.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
-
-
 # (sequence, mismatch budget). The core and the adapter body catch a mosaic end
 # that is cut off by the start of the read.
 PROBES = [(ME, 2), (rc(ME), 2),
           ("TATACACATCT", 1), ("AGATGTGTATA", 1),
           ("GACGCTGCCGACGA", 2), ("TCGTCGGCAGCGTC", 2)]
-
-
-def read_header(f):
-    _v, hs, _bb, _bq, nbins = struct.unpack("<HIBBI", f.read(12))
-    f.read(8 * nbins)
-    (nt,) = struct.unpack("<I", f.read(4))
-    return hs, [struct.unpack("<IIII", f.read(16)) for _ in range(nt)]
-
-
-def decode_tile(path, idx):
-    with open(path, "rb") as f:
-        hs, tiles = read_header(f)
-        off = hs + sum(t[3] for t in tiles[:idx])
-        _t, n, _u, cs = tiles[idx]
-        f.seek(off)
-        raw = np.frombuffer(gzip.decompress(f.read(cs)), dtype=np.uint8)
-    nib = np.empty(raw.size * 2, dtype=np.uint8)
-    nib[0::2] = raw & 0x0F
-    nib[1::2] = raw >> 4
-    nib = nib[:n]
-    seq = BASES[nib & 0x3].copy()
-    seq[(nib >> 2) == 0] = ord("N")
-    return seq
-
-
-def read_block(lane, start, length, idx):
-    return np.stack([decode_tile(f"{lane}/C{c}.1/L001_1.cbcl", idx)
-                     for c in range(start, start + length)], axis=1)
-
-
-def one_mismatch_map(bcs):
-    exact = set(bcs)
-    m = {b: b for b in bcs}
-    amb = set()
-    for bc in bcs:
-        for i in range(len(bc)):
-            for b in "ACGTN":
-                v = bc[:i] + b + bc[i + 1:]
-                if v in m and m[v] != bc:
-                    amb.add(v)
-                else:
-                    m.setdefault(v, bc)
-    for v in amb - exact:
-        m.pop(v, None)
-    return m
 
 
 def earliest_adapter(M):
@@ -119,9 +72,9 @@ def main():
     total = 0
 
     for t in range(ntiles):
-        i1 = read_block(lane, I1_START, I1_LEN, t)
-        i2 = read_block(lane, I2_START, I2_LEN, t)
-        r2 = read_block(lane, R2_START, N_R2, t)
+        i1, _ = read_tile(lane, I1_START, I1_LEN, t)
+        i2, _ = read_tile(lane, I2_START, I2_LEN, t)
+        r2, _ = read_tile(lane, R2_START, N_R2, t)
         total += i1.shape[0]
         print(f"tile {t}: {i1.shape[0]} clusters", file=sys.stderr)
         first = earliest_adapter(r2)

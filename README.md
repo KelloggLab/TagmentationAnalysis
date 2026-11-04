@@ -16,6 +16,9 @@ core/                           Functions shared across the apps
   TsvMapHelperFunctions.py        Analysis of insertion TSVs: on-target %, TSD motifs, profiles
   NovoCAST_helper.py              Predicted insertion sites for novel CAST systems
   NGSanalysis_module.py           Primer trimming and bbmap/samtools wrappers
+  illumina.py                     Reads Illumina base calls straight out of .cbcl files
+  barcodes.py                     Error-tolerant barcode lookup for demultiplexing
+  snapgene.py                     SnapGene .dna -> FASTA + feature table
 apps/                           One folder per assay, each with its own README
   ecoli_profiling/                CAST integration profiling in E. coli
   human_profiling/                UdiTaS: CAST insertion outcomes in human cells
@@ -100,7 +103,7 @@ conda activate seqsuite
 python -m unittest discover -s tests -v
 ```
 
-209 tests, about 25 seconds. They build a synthetic 50 kb genome and a donor
+211 tests, about 25 seconds. They build a synthetic 50 kb genome and a donor
 plasmid, plant insertions at known positions, and check that
 `ecoli_profiling`'s pipeline recovers every one of them and that the backbone
 filter drops the backbone-derived reads while sparing the Cargo-derived ones —

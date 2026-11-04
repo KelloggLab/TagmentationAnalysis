@@ -11,18 +11,19 @@ usage: python3 -I extract_salvage.py <BaseCalls/L001> <ntiles> <outdir>
 import gzip
 import json
 import os
-import struct
 import sys
 from collections import Counter, defaultdict
 
-import numpy as np
-
-BASES = np.frombuffer(b"ACGT", dtype=np.uint8)
-
-# -I drops the script's directory from sys.path; add just that one back.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# -I drops the script's directory from sys.path; add it back so `runconfig`
+# resolves, plus the repository root so `core` does too, with or without an
+# editable install.
+sys.path.insert(0, HERE)
+sys.path.insert(1, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import runconfig  # noqa: E402
+from core.barcodes import mism, one_mismatch_map, rc  # noqa: E402
+from core.illumina import read_tile  # noqa: E402
 
 CFG = runconfig.load()
 
@@ -50,73 +51,7 @@ SITE_KEY = CFG.site_key
 STILL_DONOR_PROBE = 20
 
 
-def rc(s):
-    return s.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
-
-
 PROBES = (ME[:15], rc(ME)[:15])
-
-
-def read_header(f):
-    _v, header_size, _bb, _bq, nbins = struct.unpack("<HIBBI", f.read(12))
-    raw = f.read(8 * nbins)
-    pairs = struct.unpack("<" + "II" * nbins, raw)
-    qmap = {pairs[2 * i]: pairs[2 * i + 1] for i in range(nbins)}
-    (ntiles,) = struct.unpack("<I", f.read(4))
-    tiles = [struct.unpack("<IIII", f.read(16)) for _ in range(ntiles)]
-    return header_size, tiles, qmap
-
-
-def decode_tile(path, tile_idx, want_qual):
-    with open(path, "rb") as f:
-        header_size, tiles, qmap = read_header(f)
-        offset = header_size + sum(t[3] for t in tiles[:tile_idx])
-        _tile, nclust, _usize, csize = tiles[tile_idx]
-        f.seek(offset)
-        raw = np.frombuffer(gzip.decompress(f.read(csize)), dtype=np.uint8)
-    nib = np.empty(raw.size * 2, dtype=np.uint8)
-    nib[0::2] = raw & 0x0F
-    nib[1::2] = raw >> 4
-    nib = nib[:nclust]
-    seq = BASES[nib & 0x3].copy()
-    qbin = nib >> 2
-    seq[qbin == 0] = ord("N")
-    if not want_qual:
-        return seq, None
-    lut = np.full(4, 33, dtype=np.uint8)
-    for b, q in qmap.items():
-        if b < 4:
-            lut[b] = 33 + min(q, 60)
-    return seq, lut[qbin]
-
-
-def read_block(lane_dir, start, length, tile_idx, want_qual=False):
-    cols = [decode_tile(f"{lane_dir}/C{c}.1/L001_1.cbcl", tile_idx, want_qual)
-            for c in range(start, start + length)]
-    bases = np.stack([c[0] for c in cols], axis=1)
-    quals = np.stack([c[1] for c in cols], axis=1) if want_qual else None
-    return bases, quals
-
-
-def one_mismatch_map(barcodes):
-    exact = set(barcodes)
-    m = {bc: bc for bc in barcodes}
-    ambiguous = set()
-    for bc in barcodes:
-        for i in range(len(bc)):
-            for b in "ACGTN":
-                v = bc[:i] + b + bc[i + 1:]
-                if v in m and m[v] != bc:
-                    ambiguous.add(v)
-                else:
-                    m.setdefault(v, bc)
-    for v in ambiguous - exact:
-        m.pop(v, None)
-    return m
-
-
-def mism(a, b):
-    return sum(1 for x, y in zip(a, b) if x != y and x != "N" and y != "N")
 
 
 def main():
@@ -134,9 +69,9 @@ def main():
     stat = {g: Counter() for g in groups}
 
     for t in range(ntiles):
-        i1, _ = read_block(lane_dir, I1_START, I1_LEN, t)
-        i2, _ = read_block(lane_dir, I2_START, I2_LEN, t)
-        r2, q2 = read_block(lane_dir, R2_START, N_R2, t, want_qual=True)
+        i1, _ = read_tile(lane_dir, I1_START, I1_LEN, t)
+        i2, _ = read_tile(lane_dir, I2_START, I2_LEN, t)
+        r2, q2 = read_tile(lane_dir, R2_START, N_R2, t, want_qual=True)
         print(f"tile {t}: {i1.shape[0]} clusters", file=sys.stderr)
 
         for k in range(i1.shape[0]):

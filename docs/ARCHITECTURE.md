@@ -17,8 +17,17 @@ Nothing else sits at the top level except the tests, the docs, and
 | `TsvMapHelperFunctions.py` | Analysis of an insertion TSV: on-target percentage, target-site duplications, insertion profiles |
 | `NovoCAST_helper.py` | Predicted insertion site for a spacer, for novel CAST systems |
 | `NGSanalysis_module.py` | Primer trimming and bbmap/samtools wrappers, from the older workflow |
+| `illumina.py` | Reads Illumina base calls out of a run folder's `.cbcl` files |
+| `barcodes.py` | Error-tolerant barcode lookup, reverse complement, mismatch count |
+| `snapgene.py` | SnapGene `.dna` -> FASTA plus a feature table |
 
-Every function is documented in [API.md](API.md).
+Every function in the first four modules is documented in [API.md](API.md).
+
+`illumina.py` and `barcodes.py` import numpy and nothing else, deliberately:
+the `apps/human_profiling` scripts run under `python3 -I` and read a
+sequencing run without pandas, matplotlib or Biopython. That is also why
+`barcodes.rc` exists alongside `postprocessHelpers.reverse_complement` —
+the latter is in a module that pulls in all three.
 
 `TsvMapHelperFunctions` and `NovoCAST_helper` are used today only by the
 E. coli work, so by the letter of "shared" they could live in that app. They
@@ -60,15 +69,6 @@ first on `sys.path` wins. Nothing in the current environments collides.
 
 ## What has not been done
 
-- **The CBCL reader is still copied three times.** `read_header`,
-  `decode_tile`, `read_block`, `one_mismatch_map`, `mism`, `rc` and `BASES`
-  appear verbatim in `human_profiling`'s `verify_structure.py`,
-  `recheck_inserts.py` and `extract_salvage.py`. They belong in
-  `core/illumina.py` and `core/barcodes.py`. Several tests currently assert
-  that the three copies agree with each other, which is the test suite paying
-  for the duplication.
-- **`read_snapgene.py` is in the wrong place.** It converts a SnapGene `.dna`
-  file to FASTA and has no connection to UdiTaS. It belongs in `core/`.
 - **`apps/chipseq/` has no tests.** It should get a small fixture before it is
   relied on for a figure.
 - **One open question on `recheck_inserts.py`:** it now reads 220 R2 cycles

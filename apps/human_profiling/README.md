@@ -70,11 +70,15 @@ The output is exactly the input shape
 [`apps/ecoli_profiling/map_junction_insertions.py`](../ecoli_profiling) consumes,
 which is where this app and the E. coli work meet.
 
-### Also here
+### Shared code these scripts use
 
-`read_snapgene.py` converts a SnapGene `.dna` file to FASTA plus a feature
-table. It has no run-specific constants and nothing to do with UdiTaS; it
-belongs in `core/` and is only still here because moving it has not been done.
+The CBCL reading lives in [`core/illumina.py`](../../core/illumina.py) and the
+barcode matching in [`core/barcodes.py`](../../core/barcodes.py), so the three
+scripts above share one reader rather than carrying a copy each. Both import
+numpy and nothing else, which is what keeps `python3 -I` enough to run them.
+
+A SnapGene `.dna` file can be converted to FASTA plus a feature table with
+`python3 -I ../../core/snapgene.py <in.dna> <out_prefix>`.
 
 ## What run 261030 showed
 
@@ -118,8 +122,8 @@ Gzipped FASTQs and any FASTA/`.dna` donor maps are gitignored — see
 
 ## Tests
 
-`tests/test_uditas_cbcl.py` (49 tests) runs the three CBCL scripts against a
-synthetic Illumina lane, including `extract_salvage.py` end to end;
+`tests/test_uditas_cbcl.py` (51 tests) runs these scripts and `core.illumina`
+against a synthetic Illumina lane, including `extract_salvage.py` end to end;
 `tests/test_uditas_runconfig.py` (32) covers config loading and every
-rejection; `tests/test_uditas_snapgene.py` (17) covers the `.dna` parser. None
-of them needs anything beyond numpy.
+rejection; `tests/test_core_snapgene.py` (17) covers the `.dna` parser. None of
+them needs anything beyond numpy.
