@@ -1,10 +1,13 @@
-# TagmentationAnalysis
+# seqsuite
 
-Kellogg Lab tools for mapping where CRISPR-associated transposons (CAST) integrate, using tagmentation sequencing data.
+Kellogg Lab tools for sequence-based assays. The main workflow maps where
+CRISPR-associated transposons (CAST) integrate from tagmentation sequencing
+data; `apps/uditas/` covers targeted sequencing of editing outcomes, and
+`chipseq/` paired-end ChIP-seq.
 
 Each read starts in the transposon end (LE or RE) and reads into the flanking genomic DNA. The tools here trim off the transposon sequence, map what's left to the reference genome, and report one insertion coordinate per read. Further tools filter out donor-plasmid artifacts, plot insertion profiles, and analyze sequence preferences around insertion sites (guide/PAM position, A/T richness, target-site duplications, position weight matrices).
 
-**Documentation:** [API reference](docs/API.md) for every function in the `tagmentation` package. `docs/index.html` is a landing page version of the same links, for viewing in a browser or serving with GitHub Pages.
+**Documentation:** [API reference](docs/API.md) for every function in the `tagmentation` package, and the [architecture plan](docs/ARCHITECTURE.md) for where the repository is heading (a shared library serving E. coli tagmentation, UdiTaS and ChIP-seq). `docs/index.html` is a landing page version of the same links, for viewing in a browser or serving with GitHub Pages.
 
 ## What's in this repository
 
@@ -14,7 +17,7 @@ pipeline/                       Command-line steps, run in order
   filter_donor_backbone.sh        2. drop reads that come from the donor plasmid backbone
 scripts/
   plot_profile.sh                 Quick genome-wide insertion plot (gnuplot)
-tagmentation/                   Python helper functions (import in your own notebooks)
+seqsuite/                       Python helper functions (import in your own notebooks)
   postprocessHelpers.py           Sequence utilities: guide/PAM finding, A/T richness, spacers, PWMs
   TsvMapHelperFunctions.py        Analysis of insertion TSVs: on-target %, TSD motifs, profiles
   NovoCAST_helper.py              Predicted insertion sites for novel CAST systems
@@ -24,21 +27,38 @@ legacy/                         Older bbmap-based workflow (still works, no long
   tagmentation_app.py             Streamlit web front end
 chipseq/
   chipseq_pipeline.sh             Paired-end ChIP-seq pipeline (separate from tagmentation)
+apps/
+  uditas/                         UdiTaS: CBCL-level library QC and junction-read salvage
+tests/                          Synthetic fixtures and regression tests
 environment.yml                 Conda environment with all dependencies
 ```
 
-The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and `NGSanalysis_module.py` files at the top level only forward to the copies in `tagmentation/`. They're there so older notebooks that use `import TagmentationAnalysis.postprocessHelpers` keep working, and they can be deleted once those notebooks are updated.
+The `postprocessHelpers.py`, `TsvMapHelperFunctions.py` and `NGSanalysis_module.py` files at the top level only forward to the copies in `seqsuite/`, and `tagmentation/` is an alias for the whole package. They're there so older notebooks that use `import TagmentationAnalysis.postprocessHelpers` or `from tagmentation import ...` keep working, and they can be deleted once those notebooks are updated.
 
 ## Installation
 
 ```bash
-git clone git@github.com:KelloggLab/TagmentationAnalysis.git
-cd TagmentationAnalysis
+git clone git@github.com:KelloggLab/seqsuite.git
+cd seqsuite
 conda env create -f environment.yml
-conda activate analyze_tagmentation
+conda activate seqsuite
 ```
 
-This installs the command-line tools (cutadapt, bwa, samtools, gnuplot, bbmap) and the Python libraries. It also installs this folder as the `tagmentation` Python package, so `from tagmentation import postprocessHelpers` works from any directory.
+This installs the command-line tools (cutadapt, bwa, samtools, gnuplot, bbmap) and the Python libraries. It also installs this folder as the `seqsuite` Python package, so `from seqsuite import postprocessHelpers` works from any directory.
+
+**Upgrading from an older checkout:** the package used to be called
+`tagmentation`, and the conda environment `analyze_tagmentation`. If you
+already have that environment, re-run the editable install once so the new
+name resolves:
+
+```bash
+pip install -e . --no-deps
+```
+
+Old imports keep working — `from tagmentation import postprocessHelpers`
+returns the same module object as `from seqsuite import postprocessHelpers`.
+The local folder is still named `TagmentationAnalysis`, deliberately: notebook
+folders symlink to that path.
 
 ## Main workflow
 
@@ -57,7 +77,7 @@ python pipeline/map_junction_insertions.py \
 ```
 
 This script:
-1. Uses **cutadapt** to trim the donor sequence and drop reads that don't contain it (`--error-rate`, default 0.1; `--min-len`, default 20 bp).
+1. Uses **cutadapt** to trim the donor sequence and drop reads that don't contain it (`--error-rate`, default 0.1; `--min-len`, default 20 bp). By default the *whole* `--donor-seq` must match; `--min-overlap` relaxes that if your reads genuinely start part-way into the donor. Don't lower it without reason — cutadapt's own default of 3 bases lets reads with no junction at all through as insertion calls.
 2. Maps the remaining genomic sequence with **bwa mem**, then sorts and indexes it with **samtools**. The bwa index is built automatically if it's missing.
 3. Calls one insertion coordinate per read from each alignment, taking clipping and indels into account. Alignments with MAPQ below `--min-mapq` (default 20) are skipped.
 
@@ -101,8 +121,8 @@ scripts/plot_profile.sh -f mapped_reads/sample_merged.insertions.5p.nobackbone.t
 
 ```python
 import pandas as pd
-from tagmentation import postprocessHelpers as hp
-from tagmentation import TsvMapHelperFunctions as tsvhp
+from seqsuite import postprocessHelpers as hp
+from seqsuite import TsvMapHelperFunctions as tsvhp
 
 tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
 genome = hp.load_genome("genome.fasta")
@@ -130,6 +150,14 @@ Useful functions ([full API reference](docs/API.md)):
 - **Notebook:** open it in Jupyter, edit the parameters in the "Step Three" cell (file paths, primer, donor bases, sgRNA, and the `bbmap_bin`/`samtools_bin` folders), then run every cell.
 - **Web app:** `streamlit run legacy/tagmentation_app.py`. It uses `bbmap.sh` and `samtools` from your PATH, or from the folders in `BBMAP_BIN` and `SAMTOOLS_BIN`. Output goes to `TAGMENTATION_OUTPUT_DIR` (default `tagmentation_app_output/`).
 
+## UdiTaS
+
+`apps/uditas/` holds the UdiTaS (UniDirectional Targeted Sequencing) work for
+CAST insertion outcomes in human cells. It reads Illumina `.cbcl` files
+directly, with no bcl2fastq step, to check library structure and to salvage
+junction reads from a donor-dominated run. It is currently an as-is import,
+written for one specific run; see [apps/uditas/README.md](apps/uditas/README.md).
+
 ## ChIP-seq pipeline
 
 `chipseq/chipseq_pipeline.sh` is a separate end-to-end pipeline for paired-end ChIP-seq with 1–3 replicates. The steps are Trim Galore → bwa → MACS3 BAMPE peak calling → consensus peaks → fold-enrichment plots. It needs extra tools that aren't in `environment.yml`:
@@ -139,3 +167,20 @@ conda install -c bioconda -c conda-forge trim-galore macs3 bedtools
 ```
 
 Run `chipseq/chipseq_pipeline.sh --help` for usage.
+
+## Tests
+
+```bash
+conda activate seqsuite
+python -m unittest discover -s tests -v
+```
+
+175 tests, about 15 seconds, no extra dependencies. They build a synthetic
+50 kb genome and a donor plasmid, plant insertions at known positions, and
+check that `pipeline/map_junction_insertions.py` recovers every one of them and
+that `pipeline/filter_donor_backbone.sh` drops the backbone-derived ones while
+sparing the Cargo-derived ones — plus unit tests for the helper functions in
+`seqsuite/`. A synthetic Illumina CBCL lane covers the UdiTaS readers in
+`apps/uditas/cbcl_qc/`, including `extract_salvage.py` end to end. The
+tagmentation end-to-end tests skip cleanly if cutadapt/bwa/samtools are not on
+PATH; the UdiTaS tests need only numpy. See [tests/README.md](tests/README.md).

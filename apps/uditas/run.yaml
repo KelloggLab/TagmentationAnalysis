@@ -1,0 +1,48 @@
+# UdiTaS run layout and assay parameters.
+#
+# Read by cbcl_qc/runconfig.py, which validates it; the scripts take no
+# hardcoded constants. Point them elsewhere with --config or
+# $UDITAS_RUN_CONFIG. A .json copy of this file works without PyYAML.
+
+run_id: 261030_VH00889_534_AAJLG3JM5
+platform: NextSeq 2000, P1 300 cycles
+
+sample_sheet: sample_sheet.csv
+
+# 1-based first cycle and length of each read, as the run reports them.
+# This run: R1 1-301, I1 302-309, I2 310-327, R2 328-628.
+# r2_len is how many R2 cycles to decode, not the full 301 -- the junction is
+# near the start of the read and decoding the rest costs time for nothing.
+cycles:
+  i1_start: 302
+  i1_len: 8
+  i2_start: 310
+  i2_len: 18
+  r2_start: 328
+  r2_len: 220
+  umi_len: 10        # I2 is the 10 nt UMI followed by the 8 nt i5 barcode
+
+assay:
+  mosaic_end: AGATGTGTATAAGAGACAG    # Tn5 ME; its position ends the insert
+  min_flank: 40      # shortest genomic flank worth keeping after trimming
+  site_key: 40       # flank bases used as the insertion-site identity
+
+  # A still-donor check compares a read's flank against the donor past the
+  # terminus. With fewer than this many bases to compare it cannot fire, and
+  # the loader reports the arm as inactive rather than letting it pass
+  # everything silently.
+  still_donor_min_tail: 12
+
+  arms:
+    RE:
+      primer: AGCTGACGCAAGAATGAGGGT
+      # Donor sequence from the primer's 3' end onward.
+      donor: TGTAGTGTTGTTGACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGT
+      end_len: 11    # bases of transposon end before the terminus
+    LE:
+      primer: GCATAAGCTTGCCGTTGCGG
+      # NOTE: only 7 bases past end_len, under still_donor_min_tail, so this
+      # arm's still-donor check is inactive. Extending this with the real
+      # sequence past the LE terminus from the plasmid map switches it on.
+      donor: CAAAGTTATGGGTAAAGTCACAATCC
+      end_len: 19

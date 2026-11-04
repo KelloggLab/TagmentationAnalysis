@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from tagmentation import NGSanalysis_module as ngs
+from seqsuite import NGSanalysis_module as ngs
 import subprocess
 import tempfile
 import os

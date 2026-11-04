@@ -1,12 +1,12 @@
 # API reference
 
-Functions in the `tagmentation` package. Home: [KelloggLab/TagmentationAnalysis](https://github.com/KelloggLab/TagmentationAnalysis)
+Functions in the `seqsuite` package. Home: [KelloggLab/seqsuite](https://github.com/KelloggLab/seqsuite)
 
 ```python
-from tagmentation import postprocessHelpers as hp
-from tagmentation import TsvMapHelperFunctions as tsvhp
-from tagmentation import NovoCAST_helper as nc
-from tagmentation import NGSanalysis_module as ngs
+from seqsuite import postprocessHelpers as hp
+from seqsuite import TsvMapHelperFunctions as tsvhp
+from seqsuite import NovoCAST_helper as nc
+from seqsuite import NGSanalysis_module as ngs
 ```
 
 ## Conventions
@@ -169,7 +169,7 @@ Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `interveni
 
 This is a prediction from the guide alone and uses no sequencing data. For the same values measured from real insertions, use [`characterize_insertion_from_spacer`](#characterize_insertion_from_spacertsv-pam-guiderna-genome_sequence). Raises `IndexError` if the guide isn't in the genome.
 
-> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `tagmentation.NovoCAST_helper`.
+> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `seqsuite.NovoCAST_helper`.
 
 ---
 

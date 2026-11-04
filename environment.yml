@@ -1,4 +1,4 @@
-name: analyze_tagmentation
+name: seqsuite
 channels:
   - conda-forge
   - bioconda
@@ -15,9 +15,10 @@ dependencies:
   - biopython
   - numpy
   - pandas
+  - pyyaml
   - matplotlib
   - jupyterlab
   - streamlit      # legacy web app only
   - pip
   - pip:
-      - -e .       # installs the tagmentation package from this folder
+      - -e .       # installs the seqsuite package from this folder

@@ -1,0 +1,350 @@
+{
+ "lane": "/Volumes/kellogrp/home/common/04_InstrumentData/NovaSeq/261030_VH00889_534_AAJLG3JM5/Data/Intensities/BaseCalls/L001",
+ "tiles": 3,
+ "groups": {
+  "293T_LE": {
+   "assigned": 1027883,
+   "kept": 117569,
+   "adapter_too_close": 909983,
+   "still_donor": 0,
+   "too_short_after_trim": 331,
+   "distinct_sites": 81204,
+   "umi_collapsed": 113769,
+   "top_sites": [
+    {
+     "flank": "ACAATCCCAATGGCGCGCCGAGCTTGGCGTAATCATGGTC",
+     "umis": 16507,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 1437,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCATGTCTCTTATACACATCTGACGCTGCCGACGA",
+     "umis": 820,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCAAATGGCGCGCCGAGCTTGGCGTAATCATGGTC",
+     "umis": 621,
+     "reads": null
+    },
+    {
+     "flank": "AAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGTAAAGT",
+     "umis": 581,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAA",
+     "umis": 559,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAT",
+     "umis": 442,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAG",
+     "umis": 323,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCCTGTCTATTATACACATCTGACGCTGCCGACGA",
+     "umis": 213,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAC",
+     "umis": 161,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGCCTCTTATACACATCTGACGCTGCCGACGAA",
+     "umis": 133,
+     "reads": null
+    },
+    {
+     "flank": "CAATCCCAATGGCGCGCCGAGCTTGGCGTAATCATGGTCA",
+     "umis": 128,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCCCTTATACACATCTGACGCTGCCGACGAA",
+     "umis": 114,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTCCTATACACATCTGACGCTGCCGACGAA",
+     "umis": 106,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCCTGTCTCCTATACACATCTGACGCTGCCGACGA",
+     "umis": 98,
+     "reads": null
+    }
+   ]
+  },
+  "293T_RE": {
+   "assigned": 3576491,
+   "kept": 323607,
+   "adapter_too_close": 2456278,
+   "still_donor": 794763,
+   "too_short_after_trim": 1843,
+   "distinct_sites": 269701,
+   "umi_collapsed": 312166,
+   "top_sites": [
+    {
+     "flank": "GACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGG",
+     "umis": 12516,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 9850,
+     "reads": null
+    },
+    {
+     "flank": "ACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGT",
+     "umis": 859,
+     "reads": null
+    },
+    {
+     "flank": "TTGACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATG",
+     "umis": 822,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTCTGTCTATTATACACATCTGACGCTGCC",
+     "umis": 473,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTTACTGTCTATTATACACATCTGACGCTG",
+     "umis": 468,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGAGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 351,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTGTCTATTATACACATCTGACGCTGCCGACGA",
+     "umis": 236,
+     "reads": null
+    },
+    {
+     "flank": "GACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGT",
+     "umis": 230,
+     "reads": null
+    },
+    {
+     "flank": "GGAGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 212,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTGTCTCTTATCCACATCTGACGCTGCCGACGA",
+     "umis": 188,
+     "reads": null
+    },
+    {
+     "flank": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+     "umis": 153,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTTATGGCCGTCTCTTATACACATCTGACG",
+     "umis": 131,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTATCTCTTATACACATCTGACGCTGCCGACGA",
+     "umis": 131,
+     "reads": null
+    },
+    {
+     "flank": "TGACCTATCTCTTATACACATCTGACGCTGCCGACGAAAA",
+     "umis": 118,
+     "reads": null
+    }
+   ]
+  },
+  "FT_LE": {
+   "assigned": 906600,
+   "kept": 101780,
+   "adapter_too_close": 804598,
+   "still_donor": 0,
+   "too_short_after_trim": 222,
+   "distinct_sites": 63512,
+   "umi_collapsed": 96566,
+   "top_sites": [
+    {
+     "flank": "ACAATCCCAATGGCGCGCCGAGCTTGGCGTAATCATGGTC",
+     "umis": 17603,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 1230,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCATGTCTCTTATACACATCTGACGCTGCCGACGA",
+     "umis": 897,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAA",
+     "umis": 630,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCAAATGGCGCGCCGAGCTTGGCGTAATCATGGTC",
+     "umis": 559,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAT",
+     "umis": 465,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAG",
+     "umis": 286,
+     "reads": null
+    },
+    {
+     "flank": "AAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGTAAAGT",
+     "umis": 280,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCCTGTCTATTATACACATCTGACGCTGCCGACGA",
+     "umis": 211,
+     "reads": null
+    },
+    {
+     "flank": "ACACCCAGCAGGCAGAAGTATGCAAAGCATGCATCTCAAT",
+     "umis": 200,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCTATTATACACATCTGACGCTGCCGACGAC",
+     "umis": 146,
+     "reads": null
+    },
+    {
+     "flank": "CAATCCCAATGGCGCGCCGAGCTTGGCGTAATCATGGTCA",
+     "umis": 133,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGCCTCTTATACACATCTGACGCTGCCGACGAA",
+     "umis": 127,
+     "reads": null
+    },
+    {
+     "flank": "ACAATCCTGTCCCTTATACACATCTGACGCTGCCGACGAA",
+     "umis": 109,
+     "reads": null
+    },
+    {
+     "flank": "CATCGCCGCCTGGTTTCACCAGTTGCGCACAGGCTCTGAC",
+     "umis": 109,
+     "reads": null
+    }
+   ]
+  },
+  "FT_RE": {
+   "assigned": 2964793,
+   "kept": 249290,
+   "adapter_too_close": 1950005,
+   "still_donor": 763884,
+   "too_short_after_trim": 1614,
+   "distinct_sites": 207748,
+   "umi_collapsed": 243122,
+   "top_sites": [
+    {
+     "flank": "GACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGG",
+     "umis": 11919,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 8329,
+     "reads": null
+    },
+    {
+     "flank": "ACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGGT",
+     "umis": 856,
+     "reads": null
+    },
+    {
+     "flank": "TTGACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATG",
+     "umis": 757,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTTACTGTCTATTATACACATCTGACGCTG",
+     "umis": 363,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTCTGTCTATTATACACATCTGACGCTGCC",
+     "umis": 348,
+     "reads": null
+    },
+    {
+     "flank": "GGGGGGAGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 288,
+     "reads": null
+    },
+    {
+     "flank": "GACGGCAAAGTTATGGTTCCAGTAACGGCAAAGTTATGGT",
+     "umis": 180,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTGTCTATTATACACATCTGACGCTGCCGACGA",
+     "umis": 165,
+     "reads": null
+    },
+    {
+     "flank": "GGAGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "umis": 160,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTGTCTCTTATCCACATCTGACGCTGCCGACGA",
+     "umis": 157,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCAAAGTTATGGCCGTCTCTTATACACATCTGACG",
+     "umis": 127,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTATCTCTTATACACATCTGACGCTGCCGACGA",
+     "umis": 121,
+     "reads": null
+    },
+    {
+     "flank": "TGACGGCCTGCCTCTTATACACATCTGACGCTGCCGACGA",
+     "umis": 97,
+     "reads": null
+    },
+    {
+     "flank": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+     "umis": 97,
+     "reads": null
+    }
+   ]
+  }
+ }
+}

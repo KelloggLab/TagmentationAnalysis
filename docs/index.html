@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TagmentationAnalysis Docs</title>
-<meta name="description" content="Documentation index for the Kellogg Lab TagmentationAnalysis repository.">
+<title>seqsuite Docs</title>
+<meta name="description" content="Documentation index for the Kellogg Lab seqsuite repository.">
 <style>
   :root {
     --bg: #ffffff;
@@ -121,9 +121,9 @@
 
 <header>
   <div class="bar">
-    <strong>TagmentationAnalysis</strong>
+    <strong>seqsuite</strong>
     <span style="color:var(--muted)">Kellogg Lab</span>
-    <a class="home" href="https://github.com/KelloggLab/TagmentationAnalysis">Home: KelloggLab/TagmentationAnalysis &rarr;</a>
+    <a class="home" href="https://github.com/KelloggLab/seqsuite">Home: KelloggLab/seqsuite &rarr;</a>
   </div>
 </header>
 
@@ -140,11 +140,15 @@
       <h3>API reference</h3>
       <p>Every function in the <code>tagmentation</code> package: parameters, return values and coordinate conventions.</p>
     </a>
-    <a class="card" href="https://github.com/KelloggLab/TagmentationAnalysis#readme">
+    <a class="card" href="ARCHITECTURE.md">
+      <h3>Architecture plan</h3>
+      <p>Where this is going: a shared library with per-application folders for E.&nbsp;coli tagmentation, UdiTaS and ChIP-seq.</p>
+    </a>
+    <a class="card" href="https://github.com/KelloggLab/seqsuite#readme">
       <h3>README</h3>
       <p>Installation, the command-line workflow and how to run the legacy notebook.</p>
     </a>
-    <a class="card" href="https://github.com/KelloggLab/TagmentationAnalysis">
+    <a class="card" href="https://github.com/KelloggLab/seqsuite">
       <h3>Repository home</h3>
       <p>Browse the source, open an issue or clone the repository.</p>
     </a>
@@ -164,7 +168,7 @@
       <td><code>plot_profile.sh</code> &mdash; quick genome-wide insertion plot with gnuplot.</td>
     </tr>
     <tr>
-      <td><code>tagmentation/</code></td>
+      <td><code>seqsuite/</code></td>
       <td>Python helper modules, documented in the <a href="API.md">API reference</a>.</td>
     </tr>
     <tr>
@@ -183,7 +187,7 @@
     <li>
       Install everything, which also puts the <code>tagmentation</code> package on your Python path:
       <pre><code>conda env create -f environment.yml
-conda activate analyze_tagmentation</code></pre>
+conda activate seqsuite</code></pre>
     </li>
     <li>
       Call insertion sites from a merged FASTQ:
@@ -205,8 +209,8 @@ conda activate analyze_tagmentation</code></pre>
     <li>
       Analyze the resulting TSV in Python:
       <pre><code>import pandas as pd
-from tagmentation import postprocessHelpers as hp
-from tagmentation import TsvMapHelperFunctions as tsvhp
+from seqsuite import postprocessHelpers as hp
+from seqsuite import TsvMapHelperFunctions as tsvhp
 
 tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
 genome = hp.load_genome("genome.fasta")
@@ -217,7 +221,7 @@ print(tsvhp.percent_within_distance(tsv["ins0"], hit["start"], 100))</code></pre
 
   <footer>
     Kellogg Lab &middot;
-    <a href="https://github.com/KelloggLab/TagmentationAnalysis">github.com/KelloggLab/TagmentationAnalysis</a>
+    <a href="https://github.com/KelloggLab/seqsuite">github.com/KelloggLab/seqsuite</a>
   </footer>
 </main>
 
