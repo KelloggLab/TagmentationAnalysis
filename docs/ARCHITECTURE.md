@@ -112,11 +112,11 @@ the suite and currently lives outside any repository.
 
 | Script | From | Notes |
 |---|---|---|
-| `qc_run.py` | `cbcl_qc/verify*.py`, `cbcl_index_peek.py`, `recheck_inserts.py`, `inspect_long.py`, `donor_fraction.py` | nine exploratory scripts become one QC command with subcommands; CBCL reading moves to `ngslib/illumina.py` |
+| `qc_run.py` | `cbcl_qc/verify_structure.py`, `recheck_inserts.py` | one QC command with subcommands; CBCL reading moves to `ngslib/illumina.py`. The other nine exploratory scripts were deleted as run-specific — see the history if a diagnostic is wanted back |
 | `extract_reads.py` | `cbcl_qc/extract_salvage.py` | demultiplex, trim primer + transposon end, emit per-sample FASTQ |
 | `map_junctions.py` | new, but shares `ngslib.junctions` with E. coli | UMI-deduplicated |
 | `classify_outcomes.py` | new | indels, large deletions, inversions, translocations between cut sites |
-| `qc_report.py` | `cbcl_qc/make_report.py` | uses `ngslib.report` |
+| `qc_report.py` | new — `cbcl_qc/make_report.py` was deleted as run-specific, but its page/table/chart scaffolding is worth reading in the history | uses `ngslib.report` |
 
 Two things must be fixed on the way in: the sample barcodes and LE/RE primers
 currently hardcoded in `verify_structure.py` move into the sample sheet, and

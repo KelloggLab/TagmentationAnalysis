@@ -34,9 +34,10 @@ reads kept of 8,475,767 assigned (9.3%)**:
 | `FT_LE` | 906,600 | 88.7% | 101,780 | 96,566 |
 | `FT_RE` | 2,964,793 | 65.8% | 249,290 | 243,122 |
 
-`make_report.py` turns `cbcl_qc/qc_stats.json` into a shareable write-up of
-that finding, and `donor_layout.py` / `design_helper.py` exist to redesign the
-arm primers and a blocking clamp so the next library avoids it.
+`cbcl_qc/qc_stats.json` is the machine-readable record of that finding. The
+scripts that produced the QC PDF, diagnosed the short products and worked out
+redesigned arm primers and a blocking clamp were deleted once they had answered
+their question; they are in this repository's history.
 
 ## Layout
 
@@ -45,44 +46,39 @@ cbcl_qc/                    Reads .cbcl directly, with no bcl2fastq step
 salvage/                    Output dir for extract_salvage.py (FASTQs not tracked)
 ```
 
-Only the Python is tracked here. The run's sample sheet, its bcl2fastq LSF job
-script and the generated QC PDF were removed: the i7/i5 barcodes the scripts
-actually use are hardcoded in `cbcl_qc/verify_structure.py` (`SAMPLES`), and
-the PDF regenerates from `cbcl_qc/qc_stats.json` via `make_report.py`. The
-originals are still in `~/Projects/MD_DNA/uditas_hpc` and in this repository's
-history before this commit.
+Only the Python worth generalizing is tracked here. The run's sample sheet,
+its bcl2fastq LSF job script, the generated QC PDF and eleven one-run
+diagnostic scripts were removed: the i7/i5 barcodes the kept scripts use are
+hardcoded in `cbcl_qc/verify_structure.py` (`SAMPLES`), and nothing that
+remains imported any of the deleted modules. The originals are still in
+`~/Projects/MD_DNA/uditas_hpc` and in this repository's history, at the import
+commit `071ec96`.
 
 ### `cbcl_qc/` scripts
 
 All of these decode cycles straight out of `L001_1.cbcl` (surface 1 only) for
 the first N tiles, so they *sample* the run rather than scanning it. Run each
-with `python3 -I`, passing the lane directory. numpy only, except
-`make_report.py`, which needs matplotlib.
+with `python3 -I`, passing the lane directory. numpy only.
 
-| Script | What it answers |
+| Script | What it does |
 |---|---|
 | `verify_structure.py` | Consensus R2 prefix per sample; holds the cycle layout, barcodes and primers that the others import |
-| `verify2.py` | Primer match rate, no-call rate, where the mosaic end appears |
-| `verify3.py` | Top distinct R2 starts — is the LE/RE end one variant or a mixture? |
-| `verify4.py` | What sits between the primer and the mosaic end |
-| `verify5.py` | Are the no-mosaic-end reads diverse (genomic) or constant (donor)? |
-| `cbcl_index_peek.py` | i7/i5 orientation, and where the UMI sits in the 18-cycle I2 |
-| `recheck_inserts.py` | Primer→adapter distance again, tolerating sequencing errors |
-| `donor_fraction.py` | First pass at the donor fraction, inferring the terminus from the data |
-| `donor_fraction2.py` | Same, but taking donor sequence and terminus from the SnapGene map |
-| `donor_layout.py` | Places the LE/RE primers on the donor map; picks a blocking site |
-| `design_helper.py` | Sequences for redesigned arm primers and a blocking clamp |
-| `read_snapgene.py` | SnapGene `.dna` → FASTA + feature table |
-| `inspect_long.py` | Are long-insert survivors real genomic flank? (complexity, cross-cell-line) |
+| `recheck_inserts.py` | Primer→adapter distance, tolerating sequencing errors |
 | `extract_salvage.py` | The useful one: demultiplex, drop early-adapter reads, trim primer + transposon end, write per-sample/arm FASTQ with the UMI in the read name |
-| `make_report.py` | `qc_stats.json` → the QC PDF |
+| `read_snapgene.py` | SnapGene `.dna` → FASTA + feature table — the one module with no run-specific constants at all |
+
+The eleven deleted scripts were a diagnostic chain (`verify2`–`verify5`,
+`inspect_long`, `donor_fraction`, `donor_fraction2`), two donor-map design
+helpers (`donor_layout`, `design_helper`), an index-orientation check
+(`cbcl_index_peek`) and a 593-line PDF generator (`make_report`). Each was
+written to answer one question about this run; see the history.
 
 ## What is not tracked
 
 The gzipped FASTQs in `salvage/` (36 MB) and any FASTA/`.dna` donor maps are
 gitignored — see `.gitignore`. The small JSON summaries (`qc_stats.json`,
-`recheck_inserts.json`, `salvage_summary.json`) and the PDF *are* tracked: they
-are the record of what this run showed, they cost 200 KB, and regenerating them
+`recheck_inserts.json`, `salvage_summary.json`) *are* tracked: they
+are the record of what this run showed, they cost 150 KB, and regenerating them
 needs the raw CBCLs on the lab share. They also serve as the regression
 reference for the refactor — the ported code should reproduce these numbers.
 

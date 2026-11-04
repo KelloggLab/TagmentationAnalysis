@@ -191,8 +191,7 @@ Still uncovered, roughly in order of value:
   "it runs and writes a non-empty file" would already catch a lot
 - `chipseq/chipseq_pipeline.sh` — nothing, and it should get a fixture before
   the Python port in Phase 3
-- `apps/uditas/`: `make_report.py` (593 lines, PDF generation), and the
-  `verify2`–`verify5` / `donor_fraction*` / `inspect_long` diagnostics, which
-  are reporting scripts with little separable logic
-- `apps/uditas/cbcl_qc/design_helper.py` and `donor_layout.py` — pure sequence
-  arithmetic, and the easiest remaining win
+- `apps/uditas/` is now fully covered: the eleven one-run diagnostic and
+  reporting scripts were deleted rather than tested, and the four that remain
+  (`verify_structure`, `recheck_inserts`, `extract_salvage`, `read_snapgene`)
+  all have tests here
