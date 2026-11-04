@@ -94,7 +94,7 @@ peak calling, UdiTaS outcome classes — lives in `apps/`.
 ### `apps/ecoli_tagmentation/`
 
 Genome-wide insertion profiling in E. coli. Mostly a re-homing of today's
-`pipeline/`, `scripts/` and `tagmentation/` code.
+`pipeline/`, `scripts/` and `seqsuite/` code.
 
 | Script | From | Notes |
 |---|---|---|
@@ -186,14 +186,24 @@ and friends. That keeps working if:
 - the local folder name stays `TagmentationAnalysis` (symlinks point at a
   path, not at the GitHub repository name, so renaming on GitHub is free);
 - the top-level forwarding modules stay until those notebooks are updated;
-- `tagmentation/` remains as a thin alias package over `ngslib/` through the
-  migration, and is removed only when nothing imports it.
+- `tagmentation/` remains as an alias package over `seqsuite/` (and later
+  `ngslib/`) through the migration, and is removed only when nothing imports
+  it. It is a four-line `sys.modules` alias, so both
+  `from tagmentation import postprocessHelpers` and
+  `from seqsuite import postprocessHelpers` return the same module object.
+
+The package was renamed `tagmentation` -> `seqsuite` without touching the
+local folder name, exactly because of those symlinks.
 
 ## Open questions
 
-1. **Names.** "TagmentationAnalysis" stops describing a repository that also
-   does ChIP-seq. Renaming on GitHub is cheap and redirects old URLs; the
-   local folder and the import root are the parts that cost something.
+1. ~~**Names.**~~ **Decided.** The repository and import root are `seqsuite`
+   -- general enough for any sequence-based assay, and checked against PyPI,
+   GitHub and the literature before being adopted. The import root moved
+   first, with `tagmentation/` left as an alias; the GitHub rename redirects
+   old URLs. The **local folder stays `TagmentationAnalysis`**, because seven
+   notebook folders symlink to that path. Rename it only after those
+   symlinks are repointed.
 2. **UdiTaS outcome categories.** Matching the published UDiTaS categories
    makes results comparable with the literature; defining our own fits CAST
    insertion outcomes better. This decides the `classify_outcomes.py` schema.

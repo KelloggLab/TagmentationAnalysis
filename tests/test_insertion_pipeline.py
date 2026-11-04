@@ -9,7 +9,7 @@ fail here.
 Needs cutadapt, bwa and samtools on PATH, and pysam importable; the whole class
 skips if they are missing. In the lab environment:
 
-    conda activate analyze_tagmentation
+    conda activate seqsuite
     python -m unittest discover -s tests -v
 """
 

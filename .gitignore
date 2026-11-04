@@ -1,3 +1,10 @@
 __pycache__/
 .ipynb_checkpoints/
 .donor_backbone_cache/
+
+# Python packaging build artifacts
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.pyc

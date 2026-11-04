@@ -1,7 +1,7 @@
 """Tests for insertion-table analysis and for the CAST insertion geometry.
 
-Covers `tagmentation.TsvMapHelperFunctions` (the parts that are pure
-arithmetic on a table) and `tagmentation.NovoCAST_helper`. The geometry in
+Covers `seqsuite.TsvMapHelperFunctions` (the parts that are pure
+arithmetic on a table) and `seqsuite.NovoCAST_helper`. The geometry in
 NovoCAST_helper is fixed by two constants, so its output is fully predictable
 and is asserted here position by position -- which matters, because the
 architecture plan moves those constants into `apps/ecoli_tagmentation` and the
@@ -13,9 +13,9 @@ import unittest
 
 import pandas as pd
 
-from tagmentation import NovoCAST_helper as novo
-from tagmentation import TsvMapHelperFunctions as tsvhp
-from tagmentation import postprocessHelpers as hp
+from seqsuite import NovoCAST_helper as novo
+from seqsuite import TsvMapHelperFunctions as tsvhp
+from seqsuite import postprocessHelpers as hp
 
 
 def make_tsv(rows):

@@ -11,7 +11,7 @@ quietly changing results.
 Nothing to install — they use the standard library's `unittest`.
 
 ```bash
-conda activate analyze_tagmentation
+conda activate seqsuite
 python -m unittest discover -s tests -v
 ```
 

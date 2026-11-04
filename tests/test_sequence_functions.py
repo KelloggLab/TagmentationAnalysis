@@ -1,4 +1,4 @@
-"""Unit tests for the pure functions in `tagmentation.postprocessHelpers`.
+"""Unit tests for the pure functions in `seqsuite.postprocessHelpers`.
 
 These are the functions the architecture plan moves first (Phase 0: into
 `ngslib/sequence.py`, `motifs.py` and `targets.py`), precisely because they do
@@ -12,7 +12,7 @@ import unittest
 
 import pandas as pd
 
-from tagmentation import postprocessHelpers as hp
+from seqsuite import postprocessHelpers as hp
 
 
 class ReverseComplementTest(unittest.TestCase):
