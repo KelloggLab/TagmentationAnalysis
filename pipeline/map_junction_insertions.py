@@ -3,7 +3,8 @@
 Map donor–genome junction reads to a reference genome and call insertion coordinates per read.
 
 Pipeline:
-  1) Trim donor/transposon sequence using cutadapt
+  1) Trim donor/transposon sequence using cutadapt (the whole donor sequence
+     must match by default -- see --min-overlap)
   2) Map to reference using bwa mem
   3) Sort/index BAM
   4) Call insertion site per read from BAM using CIGAR-aware coordinates
@@ -53,22 +54,35 @@ def cutadapt_trim(
     min_len: int,
     error_rate: float,
     cores: int,
+    min_overlap: Optional[int] = None,
 ):
     """
     Trims donor/transposon sequence from reads.
     If donor_side == '5p', donor expected near the 5' end; we remove it and keep downstream sequence.
     If donor_side == '3p', donor expected near the 3' end; we remove it and keep upstream sequence.
 
-    We allow partial matching with error rate; adjust if your junction is strict.
+    min_overlap is passed to cutadapt as -O: how many bases of the donor
+    sequence must be matched for it to count as found. It defaults to the full
+    length of donor_seq, so only reads carrying the complete junction-proximal
+    donor sequence are kept.
+
+    This matters more than it looks. cutadapt's -g/-a are unanchored and
+    default to -O 3, so without this a read that merely *begins* with three
+    bases resembling the end of the donor is "trimmed", survives
+    --discard-untrimmed, and is reported as an insertion even though it never
+    contained a junction. Lower min_overlap only if your reads genuinely start
+    part-way into the donor sequence.
     """
     # cutadapt:
     # -g = 5' adapter, -a = 3' adapter
-    # --discard-untrimmed optionally could be used if you ONLY want junction reads.
-    # Here we keep trimmed reads that contain donor sequence; discard those that don't match.
+    # --discard-untrimmed keeps only reads that actually contained the donor.
     if donor_side == "5p":
         adapter_arg = ["-g", donor_seq]
     else:
         adapter_arg = ["-a", donor_seq]
+
+    if min_overlap is None:
+        min_overlap = len(donor_seq)
 
     cmd = [
         "cutadapt",
@@ -76,6 +90,7 @@ def cutadapt_trim(
         "--discard-untrimmed",
         "-e", str(error_rate),
         "-m", str(min_len),
+        "-O", str(min_overlap),
         "-j", str(cores),
         "-o", str(fastq_out),
         str(fastq_in),
@@ -207,6 +222,10 @@ def main():
 
     ap.add_argument("--min-len", type=int, default=20, help="Minimum length of trimmed genomic read to keep.")
     ap.add_argument("--error-rate", type=float, default=0.1, help="cutadapt error rate (e.g. 0.1).")
+    ap.add_argument("--min-overlap", type=int, default=None,
+                    help="Bases of --donor-seq that must match for it to count as found "
+                         "(cutadapt -O). Default: the full length of --donor-seq. Lower this "
+                         "only if reads genuinely start part-way into the donor sequence.")
     ap.add_argument("--cores", type=int, default=8, help="Threads for cutadapt/bwa/samtools.")
 
     ap.add_argument("--min-mapq", type=int, default=20, help="Minimum MAPQ to report insertion.")
@@ -232,6 +251,7 @@ def main():
         min_len=args.min_len,
         error_rate=args.error_rate,
         cores=args.cores,
+        min_overlap=args.min_overlap,
     )
 
     bwa_map(ref_fa=ref, fastq=trimmed_fastq, bam_out=bam, cores=args.cores)
