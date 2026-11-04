@@ -104,7 +104,7 @@ class InsertionPipelineTest(unittest.TestCase):
 
     def test_every_planted_read_is_called_at_its_planted_site(self):
         """The strongest assertion here: each read name carries the position and
-        strand it was built from, so this checks all 96 reads individually."""
+        strand it was built from, so this checks every planted read individually."""
         checked = 0
         for row in self.rows:
             if not row["read_id"].startswith("ins_"):
@@ -151,35 +151,49 @@ class InsertionPipelineTest(unittest.TestCase):
 
     # -- the reads that should be thrown away ---------------------------
 
-    def test_unmappable_and_short_decoys_are_absent(self):
-        names = {r["read_id"] for r in self.rows}
-        for kind in ["short_flank", "unmappable"]:
-            leaked = sorted(n for n in names if n.startswith(f"decoy_{kind}"))
-            self.assertEqual(leaked, [], f"{kind} decoys should be dropped")
+    def test_every_decoy_is_dropped(self):
+        """Including the donor-free ones.
 
-    def test_one_no_donor_decoy_leaks_through(self):
-        """Known characteristic, not a planted expectation.
-
-        `cutadapt -g SEQ` is unanchored, so it will also trim a short partial
-        match at the 5' end. One of the eight donor-free decoys happens to
-        begin with 3 bases that look like the end of the donor sequence; it is
-        trimmed, therefore not discarded by --discard-untrimmed, and goes on to
-        map cleanly as ordinary genomic sequence.
-
-        It is recorded here so the behaviour is visible rather than silent. If
-        the adapter is ever anchored (`-g ^SEQ`) or --discard-untrimmed is
-        replaced by a minimum-overlap rule, this test should fail and be
-        updated -- that would be an improvement.
+        This used to leak. `cutadapt -g SEQ` is unanchored and defaults to
+        -O 3, so a read merely *beginning* with three bases resembling the end
+        of the donor was "trimmed", survived --discard-untrimmed, and was
+        reported as an insertion despite never containing a junction. The
+        pipeline now passes -O len(donor_seq) by default, so the whole
+        transposon end has to be present. If that default is ever relaxed,
+        this test is what notices.
         """
         leaked = sorted(r["read_id"] for r in self.rows
-                        if r["read_id"].startswith("decoy_no_donor"))
-        self.assertEqual(leaked, ["decoy_no_donor_7"])
-        row, = [r for r in self.rows if r["read_id"] == "decoy_no_donor_7"]
-        self.assertEqual(row["cigar"], "67M")
+                        if not r["read_id"].startswith("ins_"))
+        self.assertEqual(leaked, [])
 
     def test_total_row_count(self):
-        self.assertEqual(len(self.rows),
-                         self.truth["expected_insertion_rows"] + 1)
+        self.assertEqual(len(self.rows), self.truth["expected_insertion_rows"])
+
+    def test_lowering_min_overlap_reintroduces_the_leak(self):
+        """The other half of the above: it is the -O default doing the work,
+        not luck. At -O 3 (cutadapt's own default) the partial match is enough
+        again, and a donor-free read comes back as an insertion call."""
+        with tempfile.TemporaryDirectory() as d:
+            outdir = Path(d) / "out"
+            proc = subprocess.run(
+                [sys.executable, str(REPO / "pipeline" / "map_junction_insertions.py"),
+                 "--fastq", str(Path(self._tmp.name) / self.truth["reads_fastq"]),
+                 "--ref", str(Path(self._tmp.name) / self.truth["genome_fasta"]),
+                 "--outdir", str(outdir),
+                 "--donor-seq", self.truth["donor_end"],
+                 "--donor-side", DONOR_SIDE, "--primary-only",
+                 "--min-overlap", "3", "--cores", "2"],
+                capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+            with (outdir / f"toy_reads.insertions.{DONOR_SIDE}.tsv").open() as fh:
+                rows = list(csv.DictReader(fh, delimiter="\t"))
+        leaked = sorted(r["read_id"] for r in rows
+                        if not r["read_id"].startswith("ins_"))
+        # Which decoy leaks depends on the random genome, so assert the
+        # behaviour rather than the name: donor-free reads get through.
+        self.assertTrue(leaked, "expected at least one leak at -O 3")
+        for name in leaked:
+            self.assertTrue(name.startswith("decoy_no_donor"), name)
 
 
 class FixtureGeneratorTest(unittest.TestCase):

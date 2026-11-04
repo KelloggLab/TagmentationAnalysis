@@ -7,6 +7,7 @@ refactoring can be checked by "the same input still gives the same table".
 What it writes into <outdir>:
 
     toy_genome.fasta    50 kb of random sequence, one contig named `toy_chr`
+    toy_donor.gb        1.5 kb donor plasmid: Cargo 1..600, backbone 601..1500
     toy_reads.fastq     junction reads built from that genome, plus decoys
     truth.json          what the pipeline is expected to report
 
@@ -22,6 +23,14 @@ reference_end - 1. Every read carries its own truth in its name
 (`ins_<pos>_<strand>_<n>`), so each output row can be checked individually
 rather than only in aggregate.
 
+Two stretches of the donor plasmid are spliced into the toy genome, which is
+what makes `filter_donor_backbone.sh` testable: reads from those regions map
+to the genome (so they appear in the insertion table) while also matching the
+donor. It mimics a real situation -- a pre-existing donor integration in the
+reference strain. Backbone-derived reads should be filtered out; Cargo-derived
+reads should survive, because a genuine new integration carries Cargo sequence
+right up to the transposon end.
+
 usage: python make_fixtures.py <outdir>
 """
 
@@ -31,7 +40,8 @@ import sys
 from pathlib import Path
 
 # A synthetic transposon end. Arbitrary, but fixed: it must not occur in the
-# toy genome, or reads would be trimmed in the wrong place.
+# toy genome or in the donor plasmid, or reads would be trimmed in the wrong
+# place.
 DONOR_END = "ACGTTGCATCAGGTCCTTAAGGCAT"
 
 GENOME_LEN = 50_000
@@ -43,15 +53,42 @@ SEED = 20261103
 GUIDE_POS = 12_000
 GUIDE_LEN = 20
 
-# (position, strand, n_reads). Positions are 0-based.
+# Donor plasmid: Cargo occupies 1..CARGO_LEN, the backbone the rest. The
+# backbone filter screens only the backbone.
+CARGO_LEN = 600
+BACKBONE_LEN = 900
+DONOR_NAME = "toy_donor"
+
+# Where stretches of the donor are spliced into the genome, and which part of
+# the donor they come from. Both are 400 bp.
+HOMOLOGY = {
+    "backbone": {"genome_start": 25_000, "donor_slice": (100, 500)},
+    "cargo": {"genome_start": 35_000, "donor_slice": (100, 500)},
+}
+HOMOLOGY_LEN = 400
+
+# (position, strand, n_reads, origin). Positions are 0-based. `origin` says
+# what the flanking sequence actually is, which is what the backbone filter is
+# expected to act on:
+#   genome            ordinary unique genomic DNA  -> always kept
+#   backbone          70 bp of donor backbone      -> filtered out
+#   backbone_partial  40 bp of backbone, then genome -> filtered at -m 30,
+#                     kept at -m 50, so it pins the threshold
+#   cargo             70 bp of donor Cargo         -> deliberately kept
 PLANTED = [
-    (12_071, "+", 50),   # hotspot, 71 bp downstream of the guide start
-    (12_071, "-", 10),   # same position, other strand
-    (12_500, "+", 25),   # second hotspot
-    (30_000, "+", 5),
-    (30_123, "-", 5),
-    (41_000, "+", 1),    # singleton
+    (12_071, "+", 50, "genome"),   # hotspot, 71 bp downstream of the guide
+    (12_071, "-", 10, "genome"),   # same position, other strand
+    (12_500, "+", 25, "genome"),   # second hotspot
+    (25_100, "+", 10, "backbone"),
+    (25_360, "+", 8, "backbone_partial"),
+    (30_000, "+", 5, "genome"),
+    (30_123, "-", 5, "genome"),
+    (35_100, "+", 10, "cargo"),
+    (41_000, "+", 1, "genome"),    # singleton
 ]
+
+# How much of the flank is donor backbone, for the partial site above.
+PARTIAL_BACKBONE_BP = 40
 
 # Reads that should NOT produce an insertion call, and why.
 #   no_donor     no transposon end -> cutadapt --discard-untrimmed drops it
@@ -68,21 +105,12 @@ def revcomp(s):
     return s.translate(COMPLEMENT)[::-1]
 
 
-def make_genome(rng):
-    """Random sequence, regenerated until it contains no donor-end lookalike."""
-    while True:
-        g = "".join(rng.choice("ACGT") for _ in range(GENOME_LEN))
-        # The donor end must be absent, and so must anything within 2
-        # mismatches of it, since cutadapt runs at --error-rate 0.1 over 25 bp.
-        if not _has_near_match(g, DONOR_END, max_mismatch=2):
-            return g
-
-
-def _has_near_match(genome, probe, max_mismatch):
+def _has_near_match(seq, probe, max_mismatch):
+    """True if `probe` occurs in `seq` within max_mismatch substitutions."""
     m = len(probe)
-    for i in range(len(genome) - m + 1):
+    for i in range(len(seq) - m + 1):
         mm = 0
-        for a, b in zip(genome[i:i + m], probe):
+        for a, b in zip(seq[i:i + m], probe):
             if a != b:
                 mm += 1
                 if mm > max_mismatch:
@@ -90,6 +118,42 @@ def _has_near_match(genome, probe, max_mismatch):
         else:
             return True
     return False
+
+
+def _clean_random(rng, length):
+    """Random sequence containing nothing resembling the transposon end.
+
+    Two mismatches, because cutadapt runs at --error-rate 0.1 over 25 bp.
+    """
+    while True:
+        s = "".join(rng.choice("ACGT") for _ in range(length))
+        if not _has_near_match(s, DONOR_END, max_mismatch=2):
+            return s
+
+
+def build_donor(rng):
+    """Returns (donor_sequence, cargo, backbone)."""
+    donor = _clean_random(rng, CARGO_LEN + BACKBONE_LEN)
+    return donor, donor[:CARGO_LEN], donor[CARGO_LEN:]
+
+
+def build_genome(rng, cargo, backbone):
+    """Random genome with one backbone stretch and one Cargo stretch spliced in."""
+    genome = _clean_random(rng, GENOME_LEN)
+
+    for part, source in (("backbone", backbone), ("cargo", cargo)):
+        spec = HOMOLOGY[part]
+        a, b = spec["donor_slice"]
+        chunk = source[a:b]
+        assert len(chunk) == HOMOLOGY_LEN, part
+        start = spec["genome_start"]
+        genome = genome[:start] + chunk + genome[start + HOMOLOGY_LEN:]
+
+    assert len(genome) == GENOME_LEN
+    # Splicing cannot have introduced a transposon-end lookalike, but check,
+    # because a false one here would silently corrupt every expectation.
+    assert not _has_near_match(genome, DONOR_END, max_mismatch=2)
+    return genome
 
 
 def junction_read(genome, pos, strand):
@@ -101,18 +165,55 @@ def junction_read(genome, pos, strand):
     return DONOR_END + flank
 
 
+def write_genbank(path, donor):
+    """A minimal GenBank file of the shape filter_donor_backbone.sh parses:
+    a misc_feature at 1..N labelled Cargo, then an ORIGIN block."""
+    lines = [
+        f"LOCUS       {DONOR_NAME}         {len(donor)} bp    DNA     circular SYN 03-NOV-2026",
+        "DEFINITION  Synthetic donor plasmid for the test suite.",
+        "ACCESSION   .",
+        "KEYWORDS    .",
+        "SOURCE      synthetic DNA construct",
+        "FEATURES             Location/Qualifiers",
+        f"     misc_feature    1..{CARGO_LEN}",
+        '                     /label="Cargo"',
+        f"     misc_feature    {CARGO_LEN + 1}..{len(donor)}",
+        '                     /label="Backbone"',
+        "ORIGIN",
+    ]
+    for i in range(0, len(donor), 60):
+        block = donor[i:i + 60].lower()
+        groups = " ".join(block[j:j + 10] for j in range(0, len(block), 10))
+        lines.append(f"{i + 1:>9} {groups}")
+    lines.append("//")
+    path.write_text("\n".join(lines) + "\n")
+
+
 def build(outdir):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(SEED)
 
-    genome = make_genome(rng)
+    donor, cargo, backbone = build_donor(rng)
+    genome = build_genome(rng, cargo, backbone)
 
     # Keep the planted sites distinguishable: no two within a read length of
     # each other, or a single alignment could be attributed to either.
-    positions = sorted({p for p, _, _ in PLANTED})
+    positions = sorted({p for p, _, _, _ in PLANTED})
     for a, b in zip(positions, positions[1:]):
         assert b - a > FLANK, f"planted sites {a} and {b} are too close to tell apart"
+
+    # The donor-derived sites must really sit in the spliced-in regions, or the
+    # backbone-filter expectations below are meaningless.
+    for pos, _, _, origin in PLANTED:
+        if origin == "backbone":
+            assert genome[pos:pos + FLANK] in backbone, pos
+        elif origin == "cargo":
+            assert genome[pos:pos + FLANK] in cargo, pos
+        elif origin == "backbone_partial":
+            head = genome[pos:pos + PARTIAL_BACKBONE_BP]
+            assert head in backbone, pos
+            assert genome[pos:pos + FLANK] not in backbone, pos
 
     fasta = outdir / "toy_genome.fasta"
     with fasta.open("w") as fh:
@@ -120,9 +221,12 @@ def build(outdir):
         for i in range(0, len(genome), 60):
             fh.write(genome[i:i + 60] + "\n")
 
+    gb = outdir / "toy_donor.gb"
+    write_genbank(gb, donor)
+
     records = []  # (name, sequence)
 
-    for pos, strand, n in PLANTED:
+    for pos, strand, n, _ in PLANTED:
         seq = junction_read(genome, pos, strand)
         for i in range(n):
             records.append((f"ins_{pos}_{strand}_{i}", seq))
@@ -149,9 +253,15 @@ def build(outdir):
         for name, seq in records:
             fh.write(f"@{name}\n{seq}\n+\n{QUAL * len(seq)}\n")
 
+    expected = [{"pos": p, "strand": s, "n_reads": n, "origin": o}
+                for p, s, n, o in PLANTED]
+    filtered_out = sum(e["n_reads"] for e in expected
+                       if e["origin"] in ("backbone", "backbone_partial"))
+
     truth = {
         "genome_fasta": fasta.name,
         "reads_fastq": fastq.name,
+        "donor_genbank": gb.name,
         "genome_name": GENOME_NAME,
         "genome_len": GENOME_LEN,
         "donor_end": DONOR_END,
@@ -161,10 +271,17 @@ def build(outdir):
             "pos": GUIDE_POS,
             "sequence": genome[GUIDE_POS:GUIDE_POS + GUIDE_LEN],
         },
-        "expected_insertions": [
-            {"pos": p, "strand": s, "n_reads": n} for p, s, n in PLANTED
-        ],
-        "expected_insertion_rows": sum(n for _, _, n in PLANTED),
+        "donor": {
+            "length": len(donor),
+            "cargo_end": CARGO_LEN,
+            "backbone_len": BACKBONE_LEN,
+            "backbone": backbone,
+        },
+        "homology": {k: dict(v, length=HOMOLOGY_LEN) for k, v in HOMOLOGY.items()},
+        "partial_backbone_bp": PARTIAL_BACKBONE_BP,
+        "expected_insertions": expected,
+        "expected_insertion_rows": sum(e["n_reads"] for e in expected),
+        "expected_backbone_filtered": filtered_out,
         "decoys": [{"kind": k, "n_reads": n} for k, n in DECOYS],
         "total_reads": len(records),
     }
@@ -175,10 +292,11 @@ def build(outdir):
 
 def main():
     if len(sys.argv) != 2:
-        sys.exit(__doc__.strip().splitlines()[-1])
+        sys.exit("usage: python make_fixtures.py <outdir>")
     truth = build(sys.argv[1])
     print(f"wrote {truth['total_reads']} reads "
-          f"({truth['expected_insertion_rows']} with a known insertion) "
+          f"({truth['expected_insertion_rows']} with a known insertion, "
+          f"{truth['expected_backbone_filtered']} of them donor-backbone) "
           f"to {sys.argv[1]}")
 
 

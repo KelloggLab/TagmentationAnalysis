@@ -58,7 +58,7 @@ python pipeline/map_junction_insertions.py \
 ```
 
 This script:
-1. Uses **cutadapt** to trim the donor sequence and drop reads that don't contain it (`--error-rate`, default 0.1; `--min-len`, default 20 bp).
+1. Uses **cutadapt** to trim the donor sequence and drop reads that don't contain it (`--error-rate`, default 0.1; `--min-len`, default 20 bp). By default the *whole* `--donor-seq` must match; `--min-overlap` relaxes that if your reads genuinely start part-way into the donor. Don't lower it without reason — cutadapt's own default of 3 bases lets reads with no junction at all through as insertion calls.
 2. Maps the remaining genomic sequence with **bwa mem**, then sorts and indexes it with **samtools**. The bwa index is built automatically if it's missing.
 3. Calls one insertion coordinate per read from each alignment, taking clipping and indels into account. Alignments with MAPQ below `--min-mapq` (default 20) are skipped.
 
@@ -148,9 +148,10 @@ conda activate analyze_tagmentation
 python -m unittest discover -s tests -v
 ```
 
-90 tests, about 3 seconds, no extra dependencies. They build a synthetic 50 kb
-genome with insertions planted at known positions and check that
-`pipeline/map_junction_insertions.py` recovers every one of them, plus unit
-tests for the helper functions in `tagmentation/`. The end-to-end tests skip
-cleanly if cutadapt/bwa/samtools are not on PATH. See
-[tests/README.md](tests/README.md).
+111 tests, about 18 seconds, no extra dependencies. They build a synthetic
+50 kb genome and a donor plasmid, plant insertions at known positions, and
+check that `pipeline/map_junction_insertions.py` recovers every one of them and
+that `pipeline/filter_donor_backbone.sh` drops the backbone-derived ones while
+sparing the Cargo-derived ones — plus unit tests for the helper functions in
+`tagmentation/`. The end-to-end tests skip cleanly if cutadapt/bwa/samtools are
+not on PATH. See [tests/README.md](tests/README.md).
