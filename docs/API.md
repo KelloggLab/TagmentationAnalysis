@@ -3,11 +3,14 @@
 Functions in the `core` package. Home: [KelloggLab/seqsuite](https://github.com/KelloggLab/seqsuite)
 
 ```python
-from core import postprocessHelpers as hp
-from core import TsvMapHelperFunctions as tsvhp
-from core import NovoCAST_helper as nc
-from core import NGSanalysis_module as ngs
+from core import sequence, motifs, guides, insertions, plots
+from core import predict_insertion, bbmap_workflow
+from core import read_cbcl, barcodes, read_snapgene
+from apps.ecoli_profiling import ccdb_integration
 ```
+
+Each function has exactly one home. `core/` holds what is shared across
+assays; anything specific to one assay lives in that app.
 
 ## Conventions
 
@@ -16,29 +19,12 @@ from core import NGSanalysis_module as ngs
 - **Positions are reported on the + (top) strand** of the input sequence, even for − strand hits.
 - **"Insertion TSV"** means the file written by `apps/ecoli_profiling/map_junction_insertions.py` (or the filtered `.nobackbone.tsv`), with columns `read_id, ref, ins0, ins1, strand, mapq, cigar, aln_start0, aln_end0_excl`. Load it with `pd.read_csv(path, sep="\t")`.
 
+
 ---
 
-## postprocessHelpers
+## core.sequence
 
-Sequence utilities: genome loading, guide and PAM finding, IUPAC motif matching, A/T content, local alignment, position weight matrices.
-
-### `SpacerHit`
-
-Frozen dataclass returned by [`extract_spacers`](#extract_spacerssequence-pam-spacer_len20-spacer_side5prime-search_strandsboth-return_rnafalse).
-
-| Field | Meaning |
-|---|---|
-| `strand` | `"+"` or `"-"`, the strand the PAM was found on |
-| `pam_start`, `pam_end` | PAM position on the + strand (end-exclusive) |
-| `spacer_start`, `spacer_end` | Spacer position on the + strand (end-exclusive) |
-| `pam_dna` | PAM sequence, + strand |
-| `spacer_top` | Spacer sequence as it reads on the **+ strand** |
-
-For a − strand hit, `spacer_top` is *not* the guide sequence; apply `reverse_complement` to get the guide.
-
-### `IUPAC_DNA`
-
-Dict mapping IUPAC codes (`A C G T U R Y S W K M B D H V N`) to the bases they allow. Used by the degenerate-matching functions.
+Generic sequence and FASTA operations: loading, reverse complement, A/T content, local alignment. Nothing here knows about guides or insertions.
 
 ### `reverse_complement(seq)`
 
@@ -51,28 +37,6 @@ Reads the **first** record of a FASTA file and returns its sequence as one strin
 ### `load_fasta_as_dict(fasta_path)`
 
 Reads **all** records of a FASTA file into `{record_id: sequence}`, upper-cased. Use when the reference has more than one contig; this is what `extract_tsd_centered_motifs_5p` uses to match the TSV's `ref` column.
-
-### `map_guide_to_genome(guide, genome)`
-
-Finds every exact occurrence of a guide and its reverse complement.
-
-Returns a **list of dicts**, forward-strand hits first:
-
-| Key | Meaning |
-|---|---|
-| `start`, `end` | Position in the genome (end-exclusive) |
-| `strand` | `"+"` or `"-"` |
-| `sequence` | Matched genomic sequence, + strand |
-
-Returns `[]` if the guide is absent. Several functions here use `hits[0]`, so check the list is non-empty, and that the guide is unique, before relying on them.
-
-> **Note:** for a `-` hit, `start`/`end` are the span on the + strand and `sequence` is the + strand sequence there — not the guide itself. Apply `reverse_complement` to `sequence` to recover the guide.
-
-### `extract_sequence_windows(positions, genome, window_bp)`
-
-For each position, extracts `window_bp` on both sides, giving sequences of `2 * window_bp + 1` bp. Positions outside the genome are skipped; windows at the ends are clipped (so they come back shorter).
-
-Returns a list of dicts with `position`, `start`, `end`, `sequence`.
 
 ### `at_richness(sequence, *, ignore_ambiguous=True)`
 
@@ -90,30 +54,19 @@ A/T richness of each sliding window: `[at_richness(w) for w in sliding_window(se
 
 Best local (Smith-Waterman) alignment, via Biopython's `PairwiseAligner`. Scores: match +2, mismatch −1, gap open −4, gap extend −0.5. Returns a Biopython alignment object; `.score` is the number used for ranking candidate off-target spacers.
 
-### `extract_spacers(sequence, pam, spacer_len=20, spacer_side="5prime", search_strands="both", return_rna=False)`
+### `fasta_to_string(fasta_path)`
 
-Finds every PAM match (IUPAC codes allowed, e.g. `"NGG"`) and returns the adjacent spacer of `spacer_len` bp.
+Sequence of the first FASTA record, as a string.
 
-| Parameter | Meaning |
-|---|---|
-| `spacer_side` | `"5prime"`: spacer immediately 5′ of the PAM. `"3prime"`: immediately 3′ of it. |
-| `search_strands` | `"+"`, `"-"` or `"both"` |
-| `return_rna` | `True` returns the spacer with `T` replaced by `U` |
+---
 
-Returns a list of [`SpacerHit`](#spacerhit). Hits whose spacer would fall off either end are skipped.
+## core.motifs
 
-> **Note:** `return_rna` only affects `+` strand hits. On `-` strand hits, `spacer_top` is always returned as + strand DNA.
+Matching and scoring a sequence against a motif: IUPAC mismatch counting, and position weight matrices.
 
-### `find_pam_sites_with_optional_protospacer(segment, pam_motif, protospacer=None, pam_side="3prime", include_reverse_complement=False)`
+### `IUPAC_DNA`
 
-Finds PAM sites using an IUPAC-degenerate motif, optionally requiring an exact protospacer match next to each PAM.
-
-| Parameter | Meaning |
-|---|---|
-| `pam_side` | `"3prime"` (`"3"`, `"3'"`): protospacer immediately upstream, i.e. protospacer+PAM. `"5prime"` (`"5"`, `"5'"`): PAM+protospacer. |
-| `include_reverse_complement` | Also scan the − strand |
-
-Returns a list of dicts sorted by `pam_start`, then strand, with coordinates on the + strand of `segment`. Each hit has `pam_start`, `pam_end`, `strand`, `pam_seq`; when `protospacer` is given, also `protospacer_start`, `protospacer_end`, `protospacer_seq` and `pam_side`. Raises `ValueError` for an empty motif, an unknown IUPAC code, or an invalid `pam_side`.
+Dict mapping IUPAC codes (`A C G T U R Y S W K M B D H V N`) to the bases they allow. Used by the degenerate-matching functions.
 
 ### `degenerate_hamming(window, motif_iupac)`
 
@@ -151,31 +104,90 @@ Sums PWM scores across positions. `len(seq)` must equal the number of rows in `p
 
 Highest score any sequence could reach: the sum of the best letter at each position. Useful for normalizing scores.
 
----
 
-## NovoCAST_helper
 
 Prediction for novel (engineered) CAST systems: where a given spacer should direct insertion, based on the spacing measured in our profiling data rather than on sequencing reads.
 
-### `INSERTION_DISTANCE`, `TARGET_SITE_WINDOW`
+---
 
-Module constants: the insertion point lies `INSERTION_DISTANCE` (71) bp from the end of the PAM, and `TARGET_SITE_WINDOW` (10) bp of context is taken on each side of it.
+## core.guides
 
-### `predict_insertion_from_spacer(guideRNA, genome_sequence)`
+Locating guide RNAs, PAMs and spacers in a genome.
 
-Predicts where a CAST would insert for a given guide, using a fixed spacing of **71 bp** downstream of the PAM, with a ±10 bp target-site window. Assumes a 3 bp PAM.
+### `SpacerHit`
 
-Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `intervening`, `insertion_length`, `target_site`, and the coordinate columns `PAM_start/end`, `proto_start/end`, `intervene_start/end`, `ts_start/end`. The `aln_score` column exists but stays `NaN`, so the frame lines up with the one from `characterize_insertion_from_position`.
+Frozen dataclass returned by [`extract_spacers`](#extract_spacerssequence-pam-spacer_len20-spacer_side5prime-search_strandsboth-return_rnafalse).
 
-This is a prediction from the guide alone and uses no sequencing data. For the same values measured from real insertions, use [`characterize_insertion_from_spacer`](#characterize_insertion_from_spacertsv-pam-guiderna-genome_sequence). Raises `IndexError` if the guide isn't in the genome.
+| Field | Meaning |
+|---|---|
+| `strand` | `"+"` or `"-"`, the strand the PAM was found on |
+| `pam_start`, `pam_end` | PAM position on the + strand (end-exclusive) |
+| `spacer_start`, `spacer_end` | Spacer position on the + strand (end-exclusive) |
+| `pam_dna` | PAM sequence, + strand |
+| `spacer_top` | Spacer sequence as it reads on the **+ strand** |
 
-> **Note:** this function used to live in `postprocessHelpers`. It is still re-exported there, so `hp.predict_insertion_from_spacer(...)` keeps working in older notebooks, but new code should import it from `core.NovoCAST_helper`.
+For a − strand hit, `spacer_top` is *not* the guide sequence; apply `reverse_complement` to get the guide.
+
+### `map_guide_to_genome(guide, genome)`
+
+Finds every exact occurrence of a guide and its reverse complement.
+
+Returns a **list of dicts**, forward-strand hits first:
+
+| Key | Meaning |
+|---|---|
+| `start`, `end` | Position in the genome (end-exclusive) |
+| `strand` | `"+"` or `"-"` |
+| `sequence` | Matched genomic sequence, + strand |
+
+Returns `[]` if the guide is absent. Several functions here use `hits[0]`, so check the list is non-empty, and that the guide is unique, before relying on them.
+
+> **Note:** for a `-` hit, `start`/`end` are the span on the + strand and `sequence` is the + strand sequence there — not the guide itself. Apply `reverse_complement` to `sequence` to recover the guide.
+
+### `extract_sequence_windows(positions, genome, window_bp)`
+
+For each position, extracts `window_bp` on both sides, giving sequences of `2 * window_bp + 1` bp. Positions outside the genome are skipped; windows at the ends are clipped (so they come back shorter).
+
+Returns a list of dicts with `position`, `start`, `end`, `sequence`.
+
+### `extract_spacers(sequence, pam, spacer_len=20, spacer_side="5prime", search_strands="both", return_rna=False)`
+
+Finds every PAM match (IUPAC codes allowed, e.g. `"NGG"`) and returns the adjacent spacer of `spacer_len` bp.
+
+| Parameter | Meaning |
+|---|---|
+| `spacer_side` | `"5prime"`: spacer immediately 5′ of the PAM. `"3prime"`: immediately 3′ of it. |
+| `search_strands` | `"+"`, `"-"` or `"both"` |
+| `return_rna` | `True` returns the spacer with `T` replaced by `U` |
+
+Returns a list of [`SpacerHit`](#spacerhit). Hits whose spacer would fall off either end are skipped.
+
+> **Note:** `return_rna` only affects `+` strand hits. On `-` strand hits, `spacer_top` is always returned as + strand DNA.
+
+### `find_pam_sites_with_optional_protospacer(segment, pam_motif, protospacer=None, pam_side="3prime", include_reverse_complement=False)`
+
+Finds PAM sites using an IUPAC-degenerate motif, optionally requiring an exact protospacer match next to each PAM.
+
+| Parameter | Meaning |
+|---|---|
+| `pam_side` | `"3prime"` (`"3"`, `"3'"`): protospacer immediately upstream, i.e. protospacer+PAM. `"5prime"` (`"5"`, `"5'"`): PAM+protospacer. |
+| `include_reverse_complement` | Also scan the − strand |
+
+Returns a list of dicts sorted by `pam_start`, then strand, with coordinates on the + strand of `segment`. Each hit has `pam_start`, `pam_end`, `strand`, `pam_seq`; when `protospacer` is given, also `protospacer_start`, `protospacer_end`, `protospacer_seq` and `pam_side`. Raises `ValueError` for an empty motif, an unknown IUPAC code, or an invalid `pam_side`.
+
+### `sgRNA_finder(sgRNA, genome, PAM_len, natural_system)`
+
+Locates an sgRNA and the PAM beside it. Set `natural_system=False` for novel CASTs, where the PAM sits on the other side.
+
+Returns `(sgRNA_start_site, PAM_start_site, PAM_end_site, is_rc)`, where `is_rc` is `True` if the guide was found as a reverse complement. Returns `None` (with a message) if the guide isn't in the genome, which makes the caller fail when unpacking.
+
+> **Note:** these are not a sorted range. When the PAM lies upstream of the guide, `PAM_end_site` is numerically *smaller* than `PAM_start_site`. For a guide at position 10 with `PAM_len=3`, a natural system on the + strand returns `(10, 10, 7, False)`, while a novel system returns `(10, 20, 23, False)`. `PAM_start_site` is the edge that `integration_finder` measures distances from in natural systems, and `PAM_end_site` the one it uses for novel systems.
 
 ---
 
-## TsvMapHelperFunctions
+## core.insertions
 
-Analysis of insertion TSVs: subsetting, on-target percentages, target-site duplication motifs, profile plots, and relating insertions to guides and PAMs.
+Analysis of an insertion TSV: on-target percentage, target-site duplications, insertion characterisation.
 
 ### `which(df, pos)`
 
@@ -210,10 +222,6 @@ Returns the kept rows as a DataFrame with added columns `tsd_start0`, `motif_seq
 
 The `motif_seq` column is what you feed to `build_log_odds_pwm` after counting bases per position.
 
-### `plot_insertion_profile(tsv_file, gRNA, genome_sequence, fig_filename, bins=100)`
-
-Histogram of insertion positions across the genome, with the guide region shaded and marked by an arrow. Reads the TSV from disk and **keeps only MAPQ ≥ 30**. Saves to `fig_filename` and also shows the figure. Returns `None`. Needs Arial; matplotlib falls back to a default font with a warning if it's unavailable.
-
 ### `characterize_insertion_from_position(tsv, PAM, guideRNA, genome_sequence, spacer_len=20)`
 
 Works backwards from one observed insertion to the candidate spacers that could explain it — the usual way to characterize a possible off-target event. `tsv` is a **single row** (one insertion), already loaded; it searches a 120 bp window on the appropriate side and scores every spacer against `guideRNA` by local alignment.
@@ -230,11 +238,59 @@ Returns a one-row DataFrame with the same columns, or an **empty DataFrame** whe
 
 > **Note:** the `PAM` argument is currently ignored; a 3 bp PAM is assumed.
 
----
 
-## NGSanalysis_module (legacy)
 
 Functions behind the older bbmap workflow. The notebook and Streamlit app that drove them (`legacy/`) were removed from the repository; these functions stay because notebooks still import them. New analyses should use `apps/ecoli_profiling/map_junction_insertions.py` instead.
+
+---
+
+## core.predict_insertion
+
+Where a CAST is expected to insert for a given spacer, from measured spacing rather than reads.
+
+### `INSERTION_DISTANCE`, `TARGET_SITE_WINDOW`
+
+Module constants: the insertion point lies `INSERTION_DISTANCE` (71) bp from the end of the PAM, and `TARGET_SITE_WINDOW` (10) bp of context is taken on each side of it.
+
+### `predict_insertion_from_spacer(guideRNA, genome_sequence)`
+
+Predicts where a CAST would insert for a given guide, using a fixed spacing of **71 bp** downstream of the PAM, with a ±10 bp target-site window. Assumes a 3 bp PAM.
+
+Returns a one-row DataFrame with `PAM`, `protospacer`, `gRNA_strand`, `intervening`, `insertion_length`, `target_site`, and the coordinate columns `PAM_start/end`, `proto_start/end`, `intervene_start/end`, `ts_start/end`. The `aln_score` column exists but stays `NaN`, so the frame lines up with the one from `characterize_insertion_from_position`.
+
+This is a prediction from the guide alone and uses no sequencing data. For the same values measured from real insertions, use [`characterize_insertion_from_spacer`](#characterize_insertion_from_spacertsv-pam-guiderna-genome_sequence). Raises `IndexError` if the guide isn't in the genome.
+
+> **Note:** this used to be re-exported from `postprocessHelpers` as well. That re-export is gone; `core.predict_insertion` is the one home.
+
+
+
+Analysis of insertion TSVs: subsetting, on-target percentages, target-site duplication motifs, profile plots, and relating insertions to guides and PAMs.
+
+---
+
+## core.plots
+
+Figures, kept apart from the analysis that produces the numbers.
+
+### `plot_insertion_profile(tsv_file, gRNA, genome_sequence, fig_filename, bins=100)`
+
+Histogram of insertion positions across the genome, with the guide region shaded and marked by an arrow. Reads the TSV from disk and **keeps only MAPQ ≥ 30**. Saves to `fig_filename` and also shows the figure. Returns `None`. Needs Arial; matplotlib falls back to a default font with a warning if it's unavailable.
+
+### `plot_insertion_histogram(forward_positions, reverse_positions, region_start=0, region_end=None, bins=100, title="Insertion Sites", highlight_regions=None, filename=None)`
+
+Overlaid histograms of top- and bottom-strand insertions. `region_end` defaults to the largest position. `highlight_regions` is a list of `(start, end)` or `(start, end, color)` drawn as horizontal bars under the axis, for marking the guide and PAM. Saves to `filename` when given (300 dpi).
+
+Returns `(fig, ax)`.
+
+### `plot_integration_profile(data, title=..., xlabel=..., ylabel=..., xlim=(20, 100), filename=None, ...)`
+
+Histogram of insertion distances from the PAM, i.e. the output of `integration_finder`. Also accepts font sizes, colors, `linewidth` and `dpi`. Saves to `filename` when given, otherwise shows the plot. Returns the `matplotlib.pyplot` module, not a figure.
+
+---
+
+## core.bbmap_workflow
+
+The older bbmap-based insertion-calling workflow. New analyses should use `apps/ecoli_profiling/map_junction_insertions.py`; this stays because notebooks call it.
 
 ### `process_reads(fastq, primer, first_ten_in_donor, refgenome, bbmap_bin, samtools_bin, path_to_output_dir)`
 
@@ -243,10 +299,6 @@ The whole legacy pipeline: trim reads at `primer`, drop reads starting with `fir
 Returns `[forward_insertions, reverse_insertions]`, two lists of positions. `bbmap_bin` and `samtools_bin` are the **folders** holding `bbmap.sh` and `samtools`; pass `""` to use whatever is on your PATH. Creates the output directory if needed.
 
 > **Note:** `ambig=toss` discards multi-mapping reads. Both strands are called with `tn5_offset=5`.
-
-### `fasta_to_string(fasta_path)`
-
-Sequence of the first FASTA record, as a string.
 
 ### `trim_reads_by_primer(fastq_filepath, primer)`
 
@@ -274,28 +326,105 @@ Forward reads give `start0 + tn5_offset`; reverse reads give `start0 + aligned_r
 
 > **Note:** the 5 bp offset suits Tn5 cut sites. For CAST junction reads the read's genomic 5′ end is already the insertion point, so pass `tn5_offset=0` if you don't want the shift.
 
-### `sgRNA_finder(sgRNA, genome, PAM_len, natural_system)`
+---
 
-Locates an sgRNA and the PAM beside it. Set `natural_system=False` for novel CASTs, where the PAM sits on the other side.
+## apps.ecoli_profiling.ccdb_integration
 
-Returns `(sgRNA_start_site, PAM_start_site, PAM_end_site, is_rc)`, where `is_rc` is `True` if the guide was found as a reverse complement. Returns `None` (with a message) if the guide isn't in the genome, which makes the caller fail when unpacking.
-
-> **Note:** these are not a sorted range. When the PAM lies upstream of the guide, `PAM_end_site` is numerically *smaller* than `PAM_start_site`. For a guide at position 10 with `PAM_len=3`, a natural system on the + strand returns `(10, 10, 7, False)`, while a novel system returns `(10, 20, 23, False)`. `PAM_start_site` is the edge that `integration_finder` measures distances from in natural systems, and `PAM_end_site` the one it uses for novel systems.
+On-target scoring against the ccdB landing site. In the app, not in `core/`, because the ccdB target is specific to the E. coli assay.
 
 ### `integration_finder(insertion_idx_list, ccdb_gene, ccdb_start_site, PAM_start_site, PAM_end_site, natural_system, is_rc)`
 
 Keeps insertions inside the target gene and converts each to a signed distance from the PAM, taking strand and system type into account. Returns a list of distances, used for the integration-profile histogram and as the on-target count.
 
-### `plot_insertion_histogram(forward_positions, reverse_positions, region_start=0, region_end=None, bins=100, title="Insertion Sites", highlight_regions=None, filename=None)`
+---
 
-Overlaid histograms of top- and bottom-strand insertions. `region_end` defaults to the largest position. `highlight_regions` is a list of `(start, end)` or `(start, end, color)` drawn as horizontal bars under the axis, for marking the guide and PAM. Saves to `filename` when given (300 dpi).
+## core.read_cbcl
 
-Returns `(fig, ax)`.
+Reads Illumina base calls straight out of a run folder's `.cbcl` files, with no
+bcl2fastq step. Each cluster is one nibble: the low two bits are the base, the
+high two the quality bin, and bin 0 means no-call. Imports numpy and nothing
+else, so `python3 -I` scripts can use it.
 
-### `plot_integration_profile(data, title=..., xlabel=..., ylabel=..., xlim=(20, 100), filename=None, ...)`
+### `read_header(f)`
 
-Histogram of insertion distances from the PAM, i.e. the output of `integration_finder`. Also accepts font sizes, colors, `linewidth` and `dpi`. Saves to `filename` when given, otherwise shows the plot. Returns the `matplotlib.pyplot` module, not a figure.
+Parses a CBCL header from an open binary file. Returns `(header_size, tiles,
+qmap)`, where `tiles` is a list of `(tile_number, n_clusters,
+uncompressed_size, compressed_size)` and `qmap` maps quality bin to Phred
+score. Leaves the file positioned after the tile table.
 
-### `save_to_temp(uploadedFile, tmpdir)`
+### `decode_tile(path, tile_idx, want_qual=False)`
 
-Writes an uploaded file object to a temporary file in `tmpdir` and returns its path, so command-line tools can read it. Creates `tmpdir` if needed. The suffix is always `.fasta`, whatever the upload was.
+One tile of one cycle, as `(bases, quals or None)` — uint8 arrays, one element
+per cluster. Seeks to the tile by summing earlier compressed sizes.
+
+### `decode_tiles(path, ntiles, want_qual=False)`
+
+The first `ntiles` tiles of one cycle, concatenated. Equivalent to
+concatenating `decode_tile` over `range(ntiles)`.
+
+### `read_tile(lane_dir, start, length, tile_idx, want_qual=False, surface=1)`
+
+Cycles `start .. start+length-1` for one tile, as a clusters x cycles array.
+Returns `(bases, quals or None)`.
+
+### `read_tiles(lane_dir, start, length, ntiles, want_qual=False, surface=1)`
+
+As `read_tile`, over the first `ntiles` tiles stacked together.
+
+### `cbcl_path(lane_dir, cycle, surface=1)`
+
+Path to one cycle's CBCL within a lane directory.
+
+### `BASES`, `NO_CALL`
+
+The nibble-to-base table, and the character a no-call decodes to (`N`).
+
+---
+
+## core.barcodes
+
+Demultiplexing: assigning a read to a sample when its index carries a
+sequencing error. Dependency-free, for the same reason as `read_cbcl`.
+
+### `one_mismatch_map(barcodes)`
+
+Maps every one-substitution variant of each barcode to that barcode, so an
+index with one error is still assigned. A variant reachable from two different
+barcodes is ambiguous and is dropped — the read is lost rather than
+misassigned — unless the variant is itself one of the barcodes, in which case
+the exact match wins.
+
+### `rc(seq)`
+
+Reverse complement of an upper-case sequence; `N` maps to `N`. Indexes come off
+the sequencer reverse-complemented. `sequence.reverse_complement` does the same
+job but lives in a module that imports Biopython and pandas.
+
+### `mism(a, b)`
+
+Mismatches between two sequences, ignoring no-calls on either side, comparing
+only up to the shorter of the two.
+
+---
+
+## core.read_snapgene
+
+Parses SnapGene's `.dna` format: a stream of blocks, each a type byte plus a
+big-endian uint32 length. Block 0 holds the sequence after one flags byte whose
+low bit marks it circular; block 10 holds the features as XML.
+
+### `read_dna(path)`
+
+Returns `(sequence, topology, features)`. `topology` is `"circular"`,
+`"linear"` or `"?"`; `features` is a list of dicts with `name`, `type`,
+`start`, `end` and `strand`, sorted by start. Raises `ValueError` if the file
+has no sequence block.
+
+### `blocks(data)`
+
+Yields `(block_type, payload)` for each block in a `.dna` file's bytes.
+
+### `write_fasta(path, seq, name, topology)` / `write_features(path, feats)`
+
+Write the two output files. `python3 -I core/read_snapgene.py <in.dna>
+<out_prefix>` does both.

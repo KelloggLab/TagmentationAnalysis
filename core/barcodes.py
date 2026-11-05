@@ -1,8 +1,8 @@
 """Demultiplexing helpers: error-tolerant barcode lookup, and the two string
 operations that go with it.
 
-`reverse_complement` in `postprocessHelpers` does the same job as `rc` here,
-but that module imports pandas, matplotlib and Biopython. These functions stay
+`sequence.reverse_complement` does the same job as `rc` here, but that module
+imports Biopython. These functions stay
 dependency-free so the `python3 -I` scripts in `apps/human_profiling` can read
 a sequencing run with numpy alone.
 """

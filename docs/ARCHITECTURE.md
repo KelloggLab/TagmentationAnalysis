@@ -13,27 +13,38 @@ Nothing else sits at the top level except the tests, the docs, and
 
 | Module | What it holds |
 |---|---|
-| `postprocessHelpers.py` | Sequence utilities: guide/PAM finding, spacer extraction, A/T richness, sequence windows, position weight matrices |
-| `TsvMapHelperFunctions.py` | Analysis of an insertion TSV: on-target percentage, target-site duplications, insertion profiles |
-| `NovoCAST_helper.py` | Predicted insertion site for a spacer, for novel CAST systems |
-| `NGSanalysis_module.py` | Primer trimming and bbmap/samtools wrappers, from the older workflow |
-| `illumina.py` | Reads Illumina base calls out of a run folder's `.cbcl` files |
+| `sequence.py` | Sequence and FASTA primitives: reverse complement, loading, A/T content, local alignment |
+| `motifs.py` | Matching a sequence against a motif: IUPAC mismatch counting, and position weight matrices |
+| `guides.py` | Locating guide RNAs, PAMs and spacers in a genome |
+| `insertions.py` | Analysis of an insertion TSV: on-target percentage, target-site duplications |
+| `predict_insertion.py` | Where a CAST is expected to insert for a given spacer |
+| `plots.py` | Figures |
+| `bbmap_workflow.py` | The older bbmap-based insertion-calling workflow |
+| `read_cbcl.py` | Reads Illumina base calls out of a run folder's `.cbcl` files |
 | `barcodes.py` | Error-tolerant barcode lookup, reverse complement, mismatch count |
-| `snapgene.py` | SnapGene `.dna` -> FASTA plus a feature table |
+| `read_snapgene.py` | SnapGene `.dna` -> sequence, topology and features |
 
-Every function in the first four modules is documented in [API.md](API.md).
+Every function is documented in [API.md](API.md).
 
-`illumina.py` and `barcodes.py` import numpy and nothing else, deliberately:
-the `apps/human_profiling` scripts run under `python3 -I` and read a
-sequencing run without pandas, matplotlib or Biopython. That is also why
-`barcodes.rc` exists alongside `postprocessHelpers.reverse_complement` —
-the latter is in a module that pulls in all three.
+Each module is named for what it does, not for the workflow it came from. The
+four original modules were `postprocessHelpers`, `TsvMapHelperFunctions`,
+`NovoCAST_helper` and `NGSanalysis_module` -- names that said when the code ran,
+or which project it was written for, rather than what it computes. They were
+split along the lines above, which also separated figures from the analysis
+that feeds them and moved `integration_finder` out of `core/` entirely: its
+signature takes the ccdB gene's coordinates, so it is E. coli-specific and now
+lives in `apps/ecoli_profiling/ccdb_integration.py`.
 
-`TsvMapHelperFunctions` and `NovoCAST_helper` are used today only by the
-E. coli work, so by the letter of "shared" they could live in that app. They
-are here because the insertion table they operate on is not E. coli-specific —
-`human_profiling` can produce the same table — and because notebooks import
-them as general tools alongside `postprocessHelpers`.
+`read_cbcl.py`, `barcodes.py` and `read_snapgene.py` import numpy at most,
+deliberately: the `apps/human_profiling` scripts run under `python3 -I` and
+must read a sequencing run without pandas, matplotlib or Biopython. That is
+also why `barcodes.rc` exists alongside `sequence.reverse_complement`.
+
+Two pairs still overlap, kept because notebooks call both:
+`guides.sgRNA_finder` and `guides.map_guide_to_genome` both locate a guide
+(the first returns bare integers and prints on failure), and
+`sequence.fasta_to_string` and `sequence.load_genome` both read a one-record
+FASTA.
 
 ## `apps/`
 
@@ -51,8 +62,7 @@ The two profiling apps meet at one file format: `human_profiling`'s
 
 Through the installed package, from any directory:
 
-    from core import postprocessHelpers as hp
-    from core import TsvMapHelperFunctions as tsvhp
+    from core import guides, insertions, sequence
 
 An editable install (`pip install -e . --no-deps`) is needed once per
 environment. Earlier, the lab's notebooks instead reached this repository

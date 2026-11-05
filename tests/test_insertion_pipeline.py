@@ -83,7 +83,7 @@ class InsertionPipelineTest(unittest.TestCase):
     # -- the schema other code depends on -------------------------------
 
     def test_column_order_is_unchanged(self):
-        """TsvMapHelperFunctions and filter_donor_backbone.sh index by name and
+        """core.insertions and filter_donor_backbone.sh index by name and
         by column number, so the header is part of the contract."""
         self.assertEqual(
             list(self.rows[0].keys()),

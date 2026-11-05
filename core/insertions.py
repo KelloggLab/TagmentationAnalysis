@@ -1,16 +1,26 @@
+"""Analysis of an insertion table.
+
+Every function here operates on the per-read TSV written by
+`apps/ecoli_profiling/map_junction_insertions.py`, loaded with
+`pd.read_csv(path, sep="\t")`: one row per read, with the insertion coordinate
+in `ins0` (0-based) and `ins1` (1-based).
+"""
+
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional, List, Literal, Dict
-import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
-from Bio.Align import PairwiseAligner
-from collections import Counter
-from . import postprocessHelpers as hp
+
 import statistics
+from collections import Counter
+from typing import Optional
+
+import pandas as pd
+
+from .guides import extract_spacers, map_guide_to_genome
+from .sequence import load_fasta_as_dict, local_align, reverse_complement
+
 
 def which(df, pos): #operates on tsv map
     return df[df["ins0"] == pos]
+
 
 def between(df,s,e): #operates on tsv map
     subset = df[df["ins0"].between(s, e)]
@@ -44,6 +54,7 @@ def percent_within_distance(insertions, target_position, window_bp):
     )
 
     return 100.0 * count_within / len(insertions)
+
 
 def extract_tsd_centered_motifs_5p(
     tsv_path: str,
@@ -90,7 +101,7 @@ def extract_tsd_centered_motifs_5p(
     # Drop impossible negative coordinates
     df = df[df["tsd_start0"] >= 0].copy()
 
-    genome = hp.load_fasta_as_dict(genome_fasta)
+    genome = load_fasta_as_dict(genome_fasta)
 
     motifs = []
     keep = []
@@ -113,7 +124,7 @@ def extract_tsd_centered_motifs_5p(
         motif = seq[start:end_excl]  # flank_left + tsd_len + flank_right
 
         if orient_to_plus and row["strand"] == "-": #here a bottom strand INSERTION
-            motif = hp.reverse_complement(motif)
+            motif = reverse_complement(motif)
 
         motifs.append(motif)
         keep.append(idx)
@@ -161,64 +172,6 @@ def top_n_insertions_frequencies(insertions, N):
 
     return top_freqs
 
-def plot_insertion_profile(tsv_file,gRNA,genome_sequence,fig_filename,bins=100):
-    df = pd.read_csv(tsv_file, sep="\t")
-    df = df[df["mapq"] >= 30]
-    positions = df["ins0"]
-
-    gmap=hp.map_guide_to_genome(gRNA,genome_sequence)
-    # ---- plot ----
-    fig, ax = plt.subplots(figsize=(10, 3))
-
-    plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.sans-serif'] = ['Arial']
-    plt.rcParams.update({
-    'font.family': 'sans-serif',
-    'font.sans-serif': ['Arial'],
-    'font.weight': 'bold',          # global default
-    'axes.labelweight': 'bold',
-    'axes.titleweight': 'bold',
-})
-
-
-    font = {'family': 'Arial', 'size': 24}
-
-    ax.hist(
-        positions,
-        bins=bins)
-    
-    ax.set_xlabel("Genomic position (bp, 0-based)", fontdict=font)
-    ax.set_ylabel("Insertion count", fontdict=font)
-    #ax.set_yscale("log")
-
-    
-    # Draw vertical lines marking guide region
-    ax.axvspan(
-        gmap[0]['start'],
-        gmap[0]['end'],
-        alpha=0.3,
-        label=f"guideRNA ({gmap[0]['strand']})"
-    )
-
-    ax.annotate(
-        "",                              # no text
-        xy=(gmap[0]['start'], 0),             # arrow tip (on x-axis)
-        xytext=(gmap[0]['start'], -0.05),      # arrow tail (slightly below axis)
-        arrowprops=dict(
-            arrowstyle="->",
-            color="red",
-            linewidth=4
-        ),
-        annotation_clip=False
-    )
-    window_bp = 100
-    pct_ontarget = percent_within_distance(positions, gmap[0]['start'], window_bp)
-    ndx = gmap[0]['start']
-    #ax.set_title(f"Insertion site distribution: {pct_ontarget:.1f}% at site: {ndx:.1f} with window: {window_bp:.1f}")
-    
-    fig.tight_layout()
-    fig.savefig(fig_filename)
-    plt.show()
 
 def characterize_insertion_from_position(tsv,PAM, guideRNA, genome_sequence, spacer_len=20): #here tsv is already loaded
     pos = tsv['ins0'] #input tsv has to contain a single row corresponding to a single insertion event, otherwise this will fail.
@@ -229,11 +182,11 @@ def characterize_insertion_from_position(tsv,PAM, guideRNA, genome_sequence, spa
     strand = tsv['strand']
     if strand == '+':
         segment_to_search = genome_sequence[pos:pos+window]
-        all_spacers = hp.extract_spacers( segment_to_search, 'NGG', spacer_len, '5prime', search_strands='-')
+        all_spacers = extract_spacers( segment_to_search, 'NGG', spacer_len, '5prime', search_strands='-')
         #for any given system the spacer_side and PAM will be the same regardless of +/-
     else:
         segment_to_search = genome_sequence[pos-window:pos]
-        all_spacers = hp.extract_spacers( segment_to_search, 'NGG', spacer_len, '5prime', search_strands='+')
+        all_spacers = extract_spacers( segment_to_search, 'NGG', spacer_len, '5prime', search_strands='+')
     
 
     alns = []
@@ -262,7 +215,7 @@ def characterize_insertion_from_position(tsv,PAM, guideRNA, genome_sequence, spa
         protospacer_dna.append(all_spacers[ii].spacer_top) #sequences returned are always top strand
         
         if strand == '+': #insertion on top strand
-            aa=hp.local_align( guideRNA, all_spacers[ii].spacer_top )
+            aa=local_align( guideRNA, all_spacers[ii].spacer_top )
             alns.append( aa )
             aln_score.append( aa.score )
             pam_start.append(all_spacers[ii].pam_start+pos)
@@ -273,7 +226,7 @@ def characterize_insertion_from_position(tsv,PAM, guideRNA, genome_sequence, spa
             intend = pos+all_spacers[ii].pam_start
             grna_strand.append('-')
         else:
-            aa=hp.local_align( guideRNA, hp.reverse_complement( all_spacers[ii].spacer_top ))
+            aa=local_align( guideRNA, reverse_complement( all_spacers[ii].spacer_top ))
             alns.append( aa )
             aln_score.append( aa.score )
             pam_start.append(all_spacers[ii].pam_start+pos-window)
@@ -309,6 +262,7 @@ def characterize_insertion_from_position(tsv,PAM, guideRNA, genome_sequence, spa
         
     return df, alns
 
+
 def characterize_insertion_from_spacer(tsv,PAM, guideRNA, genome_sequence):
     #given a spacer that maps uniquely to the genome, give the insertion features based on our previous profiling data and what we actually observe. So.. returned df corresponds to real data, but only will choose one example to compute sequence characteristics.
     #i.e. distance should be 71 bp +/- 5 on either side. Window is 10 so that target-site sequence features can be extracted
@@ -318,7 +272,7 @@ def characterize_insertion_from_spacer(tsv,PAM, guideRNA, genome_sequence):
     distance = 71
     window = 10
     
-    grna = hp.map_guide_to_genome(guideRNA,genome_sequence)
+    grna = map_guide_to_genome(guideRNA,genome_sequence)
     if grna[0]['strand'] == '+':
         predicted_pos = grna[0]['end']+3+distance
     else:
@@ -362,4 +316,3 @@ def characterize_insertion_from_spacer(tsv,PAM, guideRNA, genome_sequence):
     df['ts_end']= [ best_ontarget+window ]
     df['gRNA_strand']= [ grna[0]['strand'] ]
     return df
-

@@ -19,7 +19,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import runconfig  # noqa: E402
 from core.barcodes import one_mismatch_map, rc  # noqa: E402
-from core.illumina import read_tiles  # noqa: E402
+from core.read_cbcl import read_tiles  # noqa: E402
 
 CFG = runconfig.load()
 

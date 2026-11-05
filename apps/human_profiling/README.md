@@ -72,13 +72,13 @@ which is where this app and the E. coli work meet.
 
 ### Shared code these scripts use
 
-The CBCL reading lives in [`core/illumina.py`](../../core/illumina.py) and the
+The CBCL reading lives in [`core/read_cbcl.py`](../../core/read_cbcl.py) and the
 barcode matching in [`core/barcodes.py`](../../core/barcodes.py), so the three
 scripts above share one reader rather than carrying a copy each. Both import
 numpy and nothing else, which is what keeps `python3 -I` enough to run them.
 
 A SnapGene `.dna` file can be converted to FASTA plus a feature table with
-`python3 -I ../../core/snapgene.py <in.dna> <out_prefix>`.
+`python3 -I ../../core/read_snapgene.py <in.dna> <out_prefix>`.
 
 ## What run 261030 showed
 
@@ -122,7 +122,7 @@ Gzipped FASTQs and any FASTA/`.dna` donor maps are gitignored — see
 
 ## Tests
 
-`tests/test_uditas_cbcl.py` (51 tests) runs these scripts and `core.illumina`
+`tests/test_uditas_cbcl.py` (51 tests) runs these scripts and `core.read_cbcl`
 against a synthetic Illumina lane, including `extract_salvage.py` end to end;
 `tests/test_uditas_runconfig.py` (32) covers config loading and every
 rejection; `tests/test_core_snapgene.py` (17) covers the `.dna` parser. None of
