@@ -117,7 +117,7 @@ conda activate seqsuite
 python -m unittest discover -s tests -v
 ```
 
-211 tests, about 25 seconds. They build a synthetic 50 kb genome and a donor
+249 tests, about 25 seconds. They build a synthetic 50 kb genome and a donor
 plasmid, plant insertions at known positions, and check that
 `ecoli_profiling`'s pipeline recovers every one of them and that the backbone
 filter drops the backbone-derived reads while sparing the Cargo-derived ones —
@@ -125,5 +125,6 @@ plus unit tests for the functions in `core/`. A synthetic Illumina CBCL lane
 covers `human_profiling` end to end.
 
 The E. coli end-to-end tests skip cleanly if cutadapt, bwa and samtools are not
-on PATH; everything else needs only numpy. `apps/chipseq/` has no tests. See
+on PATH; everything else needs only numpy. `apps/chipseq/`'s shell steps have
+no tests, though its plotting module does. See
 [tests/README.md](tests/README.md).

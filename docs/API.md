@@ -428,3 +428,41 @@ Yields `(block_type, payload)` for each block in a `.dna` file's bytes.
 
 Write the two output files. `python3 -I core/read_snapgene.py <in.dna>
 <out_prefix>` does both.
+
+---
+
+## apps.chipseq.plot_enrichment
+
+Step 7 of `chipseq_pipeline.sh`: genome-wide fold-enrichment figures from a
+MACS3 `bdgcmp -m FE` bedGraph. Not in `core/` because a fold-enrichment track
+over a bacterial genome is this assay's figure; `core.plots` draws insertion
+profiles. Needs pandas and matplotlib.
+
+### `plot_fold_enrichment(bdg_path, out_prefix, *, label, color, contig_lengths, peaks=None)`
+
+Writes a PNG and a PDF per contig and returns the paths written. With one
+contig in `contig_lengths` they are `out_prefix.png` / `.pdf`; with more they
+are `out_prefix.<contig>.png` / `.pdf`. **Each contig gets its own axis,
+spanning that contig's length** — a chromosome and a plasmid cannot share one.
+A contig with no rows in the bedGraph is skipped rather than drawn empty; a
+bedGraph contig absent from `contig_lengths` is reported on stderr and not
+plotted.
+
+### `read_fai(path)`
+
+`{contig: length}` from a samtools `.fai`, in file order. Contig names stay
+strings, so a contig called `1` still matches the bedGraph. Raises
+`ValueError` on an empty file.
+
+### `read_bedgraph(path)` / `read_peaks(path)`
+
+A 4-column bedGraph (`chrom`, `start`, `end`, `FE`) and the first three
+columns of a BED, so a 10-column `narrowPeak` works as-is. Both return an
+empty frame for an empty file; `read_peaks(None)` returns `None`.
+
+### `plot_contig(ax, track, contig_length, *, color, peaks=None)`
+
+Draws one contig onto an existing axis. The x-limit is `contig_length`, not
+the track's extent, so a track that stops early still shows the whole contig.
+The axis is labelled in Mb at 1 Mb and above, kb below.
+

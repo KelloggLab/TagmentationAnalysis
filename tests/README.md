@@ -15,7 +15,7 @@ conda activate seqsuite
 python -m unittest discover -s tests -v
 ```
 
-175 tests, about 15 seconds. Most of that is the backbone-filter file, which
+249 tests, about 15 seconds. Most of that is the backbone-filter file, which
 runs bwa once per test to keep the tests independent of each other; the pure
 unit tests finish in well under a second. `pytest tests` also works if you
 prefer it, but it is not required and is not in `environment.yml`.
@@ -41,6 +41,7 @@ OK (skipped=33)
 | `test_backbone_filter.py` | 21 | `apps/ecoli_profiling/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
 | `test_uditas_cbcl.py` | 51 | `core.read_cbcl` and `core.barcodes`, plus `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
 | `test_core_snapgene.py` | 17 | `core/read_snapgene.py`, the hand-rolled `.dna` binary parser |
+| `test_chipseq_plots.py` | 38 | `apps/chipseq/plot_enrichment.py`: per-contig axes, file naming, peak shading, the pipeline's command line |
 
 ## The synthetic dataset
 
@@ -194,8 +195,9 @@ Still uncovered, roughly in order of value:
   the ignored `PAM` argument and the unsorted PAM range noted in `docs/API.md`
 - `apps/ecoli_profiling/plot_profile.sh` and the plotting functions — hard to assert on, but
   "it runs and writes a non-empty file" would already catch a lot
-- `apps/chipseq/chipseq_pipeline.sh` — nothing at all, and it should get a
-  fixture before it is relied on for a figure
+- `apps/chipseq/chipseq_pipeline.sh` steps 0-6 — the Python in step 7 is now
+  covered by `test_chipseq_plots.py`, but the bash around it is not, and it
+  needs a synthetic FASTQ fixture run through the real tools
 - `apps/human_profiling/` is fully covered: the eleven one-run diagnostic and
   reporting scripts were deleted rather than tested, and the three that remain
   (`verify_structure`, `recheck_inserts`, `extract_salvage`) all have tests

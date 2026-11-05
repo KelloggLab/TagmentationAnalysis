@@ -49,6 +49,10 @@
 
 set -euo pipefail
 
+# Directory holding this script, so sibling helpers resolve however it
+# was invoked.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ---------------------------- defaults ----------------------------------
 THREADS=8
 MAPQ=30
@@ -423,56 +427,24 @@ done
 # ---------------------------- 7. genome-wide plots (per replicate) ----------
 echo "[7/7] Generating genome-wide enrichment plots..." | tee -a "$LOG"
 
-PLOT_REPS_PY=""
+PLOT_ARGS=()
 for ((i=1; i<=N; i++)); do
-    PLOT_REPS_PY+="(\"$OUTDIR/macs3_rep${i}/rep${i}_FE.bdg\", \"Replicate ${i}\", \"$OUTDIR/plots/rep${i}_genomewide_enrichment\"),"
+    PLOT_ARGS+=(--rep "$OUTDIR/macs3_rep${i}/rep${i}_FE.bdg" "Replicate ${i}" \
+                "$OUTDIR/plots/rep${i}_genomewide_enrichment")
 done
+if [[ "$INCLUDE_PEAKS" == "1" ]]; then
+    PLOT_ARGS+=(--peaks "$OUTDIR/consensus/consensus_peaks.bed")
+fi
 
-OUTDIR="$OUTDIR" GENOME_SIZE="$GENOME_SIZE" PLOT_REPS_PY="$PLOT_REPS_PY" INCLUDE_PEAKS="$INCLUDE_PEAKS" python3 <<'PYEOF'
-import os
-import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-
-outdir = os.environ["OUTDIR"]
-genome_size = int(os.environ["GENOME_SIZE"])
-include_peaks = os.environ["INCLUDE_PEAKS"] == "1"
-peaks = pd.read_csv(f"{outdir}/consensus/consensus_peaks.bed", sep="\t", header=None, names=["chrom","start","end"]) if include_peaks else None
-
-palette = ["#2166ac", "#b2182b", "#1a9850"]
-reps = eval("[" + os.environ["PLOT_REPS_PY"] + "]")
-
-for idx, (bdg_path, label, out_prefix) in enumerate(reps):
-    color = palette[idx % len(palette)]
-    df = pd.read_csv(bdg_path, sep="\t", header=None, names=["chrom","start","end","FE"])
-
-    fig, ax = plt.subplots(figsize=(14, 3))
-    if include_peaks:
-        for _, p in peaks.iterrows():
-            ax.axvspan(p["start"], p["end"], color="gray", alpha=0.15, linewidth=0, zorder=1)
-    ax.fill_between(df["start"], df["FE"], color=color, linewidth=0.3, alpha=0.85, zorder=2)
-
-    ax.set_xlim(0, genome_size)
-    ax.set_ylabel("Fold enrichment", fontsize=11)
-    ax.set_xlabel("Genomic position (Mb)", fontsize=11)
-    ax.set_title(label, fontsize=12, loc="left", fontweight="bold")
-    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x/1e6:.1f}"))
-    ax.spines[["top","right"]].set_visible(False)
-
-    plt.tight_layout()
-    plt.savefig(out_prefix + ".png", dpi=300, bbox_inches="tight")
-    plt.savefig(out_prefix + ".pdf", bbox_inches="tight")
-    plt.close(fig)
-    print(f"    Saved: {out_prefix}.png / .pdf")
-PYEOF
+# Contig lengths come from the .fai, not the summed GENOME_SIZE above: each
+# contig gets its own axis, so a chromosome and a plasmid are not drawn on
+# top of each other.
+python3 -I "$HERE/plot_enrichment.py" --fai "${REFERENCE}.fai" "${PLOT_ARGS[@]}" \
+    2>&1 | tee -a "$LOG"
 
 echo "=== Pipeline complete: $(date) ===" | tee -a "$LOG"
 echo ""
 echo "Key outputs:"
 echo "  Consensus peaks:  $OUTDIR/consensus/consensus_peaks.bed"
-for ((i=1; i<=N; i++)); do
-    echo "  Rep${i} plot:       $OUTDIR/plots/rep${i}_genomewide_enrichment.png/.pdf"
-done
+echo "  Enrichment plots: $OUTDIR/plots/   (one PNG + PDF per replicate per contig)"
 echo "  Full log:          $OUTDIR/logs/pipeline.log"

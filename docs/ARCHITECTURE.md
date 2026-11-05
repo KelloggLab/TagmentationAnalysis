@@ -52,7 +52,7 @@ FASTA.
 |---|---|---|---|
 | `ecoli_profiling/` | Where CAST integrates across an *E. coli* genome | Python + bash | 37, end to end against planted insertions |
 | `human_profiling/` | UdiTaS: CAST insertion outcomes in human cells | Python | 98, against a synthetic CBCL lane |
-| `chipseq/` | Paired-end ChIP-seq against a bacterial genome | bash | none |
+| `chipseq/` | Paired-end ChIP-seq against a bacterial genome | bash + Python | `test_chipseq_plots.py` (step 7 only) |
 
 The two profiling apps meet at one file format: `human_profiling`'s
 `extract_salvage.py` writes exactly the input shape `ecoli_profiling`'s
@@ -79,8 +79,10 @@ first on `sys.path` wins. Nothing in the current environments collides.
 
 ## What has not been done
 
-- **`apps/chipseq/` has no tests.** It should get a small fixture before it is
-  relied on for a figure.
+- **`apps/chipseq/`'s shell steps have no tests.** Step 7's plotting module is
+  covered by `tests/test_chipseq_plots.py`, but steps 0-6 orchestrate
+  trim_galore, bwa, samtools, macs3 and bedtools and need a synthetic FASTQ
+  fixture run through the real tools.
 - **One open question on `recheck_inserts.py`:** it now reads 220 R2 cycles
   where it used to read 200, so an adapter between cycles 200 and 220 is found
   rather than counted absent. Its numbers may no longer match the committed
