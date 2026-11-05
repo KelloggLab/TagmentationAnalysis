@@ -80,48 +80,6 @@ numpy and nothing else, which is what keeps `python3 -I` enough to run them.
 A SnapGene `.dna` file can be converted to FASTA plus a feature table with
 `python3 -I ../../core/read_snapgene.py <in.dna> <out_prefix>`.
 
-## What run 261030 showed
-
-Most of the library was donor plasmid rather than insertion junctions: the Tn5
-mosaic end sits too close to the LE/RE primer in **72% of assigned reads**,
-leaving no genomic flank. It is worse on LE (88.5%) than on RE (66–69%).
-`extract_salvage.py` recovered **792,246 reads of 8,475,767 assigned (9.3%)**:
-
-| Group | Assigned | Adapter too close | Kept | UMI-collapsed |
-|---|---:|---:|---:|---:|
-| `293T_LE` | 1,027,883 | 88.5% | 117,569 | 113,769 |
-| `293T_RE` | 3,576,491 | 68.7% | 323,607 | 312,166 |
-| `FT_LE` | 906,600 | 88.7% | 101,780 | 96,566 |
-| `FT_RE` | 2,964,793 | 65.8% | 249,290 | 243,122 |
-
-The run itself: NextSeq 2000, P1, 1 lane, R1 301 / I1 8 / I2 18 / R2 301 —
-cycles R1 1–301, I1 302–309, I2 310–327, R2 328–628 — 10.3 M clusters over 3
-sampled tiles. Eight libraries: two cell lines (FT, 293T) × two i5 (N501,
-N507) × two i7, where the i7 selects the arm — N701/N703 carry primer 251 (RE)
-and N702/N704 primer 253 (LE).
-
-The machine-readable record of this run -- `qc_stats.json`,
-`recheck_inserts.json` and `salvage_summary.json` -- used to be tracked under
-`results/261030/` and was removed on 2026-11-05. The numbers above are the
-summary worth keeping; the JSON itself is recoverable from git history
-(`git show 7261953:apps/human_profiling/results/261030/qc_stats.json`), but
-regenerating it needs the raw CBCLs from the lab share.
-
-## Known issue
-
-The still-donor check on the **LE** arm is inactive. It compares a read's
-flank against the donor sequence past the transposon end, and needs at least
-`still_donor_min_tail` (12) bases to do so — but `run.yaml` records only 7
-bases past LE's `end_len`. `runconfig.Arm.still_donor_active` reports this, and
-two tests in `tests/test_uditas_runconfig.py` pin the behaviour from both
-sides. Supplying more LE donor sequence from the plasmid map switches the check
-on with no code change.
-
-## What is not tracked
-
-Gzipped FASTQs and any FASTA/`.dna` donor maps are gitignored — see
-`.gitignore`. The raw run lives on the lab share.
-
 ## Tests
 
 `tests/test_uditas_cbcl.py` (51 tests) runs these scripts and `core.read_cbcl`
