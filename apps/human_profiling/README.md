@@ -100,10 +100,12 @@ sampled tiles. Eight libraries: two cell lines (FT, 293T) × two i5 (N501,
 N507) × two i7, where the i7 selects the arm — N701/N703 carry primer 251 (RE)
 and N702/N704 primer 253 (LE).
 
-`results/261030/` holds the machine-readable record: `qc_stats.json`,
-`recheck_inserts.json` and `salvage_summary.json`. They are tracked because
-regenerating them needs the raw CBCLs from the lab share, they cost 150 KB, and
-they are the regression reference for any future change to these scripts.
+The machine-readable record of this run -- `qc_stats.json`,
+`recheck_inserts.json` and `salvage_summary.json` -- used to be tracked under
+`results/261030/` and was removed on 2026-11-05. The numbers above are the
+summary worth keeping; the JSON itself is recoverable from git history
+(`git show 7261953:apps/human_profiling/results/261030/qc_stats.json`), but
+regenerating it needs the raw CBCLs from the lab share.
 
 ## Known issue
 

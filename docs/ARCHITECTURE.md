@@ -85,7 +85,8 @@ first on `sys.path` wins. Nothing in the current environments collides.
   fixture run through the real tools.
 - **One open question on `recheck_inserts.py`:** it now reads 220 R2 cycles
   where it used to read 200, so an adapter between cycles 200 and 220 is found
-  rather than counted absent. Its numbers may no longer match the committed
-  `results/261030/recheck_inserts.json`.
+  rather than counted absent. Its numbers may differ from the run 261030 output
+  recorded in `apps/human_profiling/README.md`. The JSON that would settle it
+  was deleted on 2026-11-05 and is now only in git history.
 - **The LE still-donor check is inactive** for want of donor sequence, not for
   want of code. See `apps/human_profiling/README.md`.

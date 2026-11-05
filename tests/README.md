@@ -131,7 +131,7 @@ works. `DONOR["LE"]` is only 26 bases with `END_LEN` 19, leaving **7** — below
 the threshold, so the branch is dead and LE reads that are really residual
 donor plasmid are reported as salvaged junctions.
 
-This is consistent with the committed `salvage_summary.json` from the real run,
+This is consistent with `salvage_summary.json` from the real run (since deleted),
 where `still_donor` is 0 for all four groups.
 
 Two tests pin it: one asserts the check works on RE, and one asserts it does
