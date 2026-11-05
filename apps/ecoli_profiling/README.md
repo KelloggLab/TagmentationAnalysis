@@ -86,9 +86,13 @@ the PAM, which only means anything for this assay's landing site. Import it as
 from apps.ecoli_profiling import ccdb_integration
 ```
 
-`apps/human_profiling/extract_salvage.py` writes exactly the input shape
-`map_junction_insertions.py` consumes, which is where this app and the human
-UdiTaS work meet.
+`apps/human_profiling/extract_salvage.py` writes the same *shape* of FASTQ,
+but it is not an input to the script here: its reads are already trimmed, so
+step 1's cutadapt would find no donor sequence and `--discard-untrimmed` would
+drop all of them. The UdiTaS equivalent is
+`apps/human_profiling/map_junction_insertions.py`, which skips the trimming,
+collapses by UMI and is stricter about MAPQ and contigs because the reference
+is 3.1 Gb. That is where this app and the human work meet.
 
 ## Requirements
 

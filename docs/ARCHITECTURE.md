@@ -51,12 +51,17 @@ FASTA.
 | App | Assay | Language | Tests |
 |---|---|---|---|
 | `ecoli_profiling/` | Where CAST integrates across an *E. coli* genome | Python + bash | 37, end to end against planted insertions |
-| `human_profiling/` | UdiTaS: CAST insertion outcomes in human cells | Python | 98, against a synthetic CBCL lane |
+| `human_profiling/` | UdiTaS: CAST insertion outcomes in human cells | Python | 151: a synthetic CBCL lane, plus pysam-built BAMs and a toy-genome run for the mapping step |
 | `chipseq/` | Paired-end ChIP-seq against a bacterial genome | bash + Python | `test_chipseq_plots.py` (step 7 only) |
 
-The two profiling apps meet at one file format: `human_profiling`'s
-`extract_salvage.py` writes exactly the input shape `ecoli_profiling`'s
-`map_junction_insertions.py` consumes.
+The two profiling apps share a FASTQ shape but not a mapping script. Each has
+its own `map_junction_insertions.py`, because the UdiTaS reads arrive already
+trimmed, carry a UMI in the read name, and go against a 3.1 Gb reference
+rather than a 4.6 Mb one -- so the human one has no trimming step, collapses
+by UMI, refuses to build a BWA index, pipes bwa into samtools sort instead of
+staging a SAM, and defaults to stricter MAPQ and primary contigs only. Feeding
+a salvage FASTQ to the E. coli script discards every read: its cutadapt step
+looks for a donor sequence that trimming already removed.
 
 ## How notebooks import this
 

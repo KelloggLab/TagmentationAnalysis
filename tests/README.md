@@ -15,7 +15,7 @@ conda activate seqsuite
 python -m unittest discover -s tests -v
 ```
 
-249 tests, about 15 seconds. Most of that is the backbone-filter file, which
+302 tests, about 15 seconds. Most of that is the backbone-filter file, which
 runs bwa once per test to keep the tests independent of each other; the pure
 unit tests finish in well under a second. `pytest tests` also works if you
 prefer it, but it is not required and is not in `environment.yml`.
@@ -41,6 +41,7 @@ OK (skipped=33)
 | `test_backbone_filter.py` | 21 | `apps/ecoli_profiling/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
 | `test_uditas_cbcl.py` | 51 | `core.read_cbcl` and `core.barcodes`, plus `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
 | `test_core_snapgene.py` | 17 | `core/read_snapgene.py`, the hand-rolled `.dna` binary parser |
+| `test_uditas_mapping.py` | 53 | `apps/human_profiling/map_junction_insertions.py`: insertion coordinates, UMI collapsing, filters, the site-flush window, plus 7 end-to-end against a toy genome |
 | `test_chipseq_plots.py` | 38 | `apps/chipseq/plot_enrichment.py`: per-contig axes, file naming, peak shading, the pipeline's command line |
 
 ## The synthetic dataset
