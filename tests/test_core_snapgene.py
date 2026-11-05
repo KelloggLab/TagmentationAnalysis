@@ -1,4 +1,4 @@
-"""Tests for `core/snapgene.py`.
+"""Tests for `core/read_snapgene.py`.
 
 It parses SnapGene's binary `.dna` format by hand -- a sequence of blocks, each
 a type byte, a big-endian uint32 length, and that many bytes. Block 0 holds the
@@ -20,7 +20,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 try:
-    from core import snapgene as rs
+    from core import read_snapgene as rs
     IMPORT_ERROR = None
 except Exception as exc:                      # pragma: no cover
     IMPORT_ERROR = str(exc)
@@ -52,7 +52,7 @@ def dna_file(path, seq, features=(), topology=CIRCULAR):
     return path
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import core.snapgene: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import core.read_snapgene: {IMPORT_ERROR}")
 class BlockParsingTest(unittest.TestCase):
     def test_reads_consecutive_blocks(self):
         data = block(0, b"first") + block(10, b"second") + block(5, b"third")
@@ -86,7 +86,7 @@ class BlockParsingTest(unittest.TestCase):
         self.assertEqual(got[0][1], b"only ten..")
 
 
-@unittest.skipIf(IMPORT_ERROR, f"cannot import core.snapgene: {IMPORT_ERROR}")
+@unittest.skipIf(IMPORT_ERROR, f"cannot import core.read_snapgene: {IMPORT_ERROR}")
 class ConversionTest(unittest.TestCase):
     """Run the script and check the two files it writes."""
 
@@ -97,7 +97,7 @@ class ConversionTest(unittest.TestCase):
         src = dna_file(d / "plasmid.dna", seq or self.SEQ, features, topology)
         prefix = d / "out"
         proc = subprocess.run(
-            [sys.executable, "-I", str(REPO / "core" / "snapgene.py"),
+            [sys.executable, "-I", str(REPO / "core" / "read_snapgene.py"),
              str(src), str(prefix)],
             capture_output=True, text=True)
         self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
@@ -171,7 +171,7 @@ class ConversionTest(unittest.TestCase):
         src = d / "broken.dna"
         src.write_bytes(block(9, b"SnapGene") + features_block([]))
         proc = subprocess.run(
-            [sys.executable, "-I", str(REPO / "core" / "snapgene.py"),
+            [sys.executable, "-I", str(REPO / "core" / "read_snapgene.py"),
              str(src), str(d / "out")],
             capture_output=True, text=True)
         self.assertNotEqual(proc.returncode, 0)

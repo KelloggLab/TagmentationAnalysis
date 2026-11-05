@@ -35,12 +35,12 @@ OK (skipped=33)
 |---|--:|---|
 | `make_fixtures.py` | — | Builds the tagmentation dataset. Not a test; run it directly to inspect the fixtures |
 | `make_cbcl_fixtures.py` | — | Writes a synthetic Illumina CBCL lane for the UdiTaS tests |
-| `test_sequence_functions.py` | 47 | `postprocessHelpers`: reverse complement, A/T richness, windows, guide mapping, IUPAC matching, PWMs |
-| `test_tsv_analysis.py` | 27 | `TsvMapHelperFunctions` arithmetic and `NovoCAST_helper` geometry |
+| `test_sequence_functions.py` | 47 | `core.sequence`, `core.guides`, `core.motifs`: reverse complement, A/T richness, windows, guide mapping, IUPAC matching, PWMs |
+| `test_tsv_analysis.py` | 27 | `core.insertions` arithmetic and `core.predict_insertion` geometry |
 | `test_insertion_pipeline.py` | 16 | `apps/ecoli_profiling/map_junction_insertions.py`, end to end, against planted truth |
 | `test_backbone_filter.py` | 21 | `apps/ecoli_profiling/filter_donor_backbone.sh`: what it drops, what it spares, caching, failure modes |
-| `test_uditas_cbcl.py` | 51 | `core.illumina` and `core.barcodes`, plus `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
-| `test_core_snapgene.py` | 17 | `core/snapgene.py`, the hand-rolled `.dna` binary parser |
+| `test_uditas_cbcl.py` | 51 | `core.read_cbcl` and `core.barcodes`, plus `apps/human_profiling/`: CBCL decoding, demultiplexing, `extract_salvage.py` end to end |
+| `test_core_snapgene.py` | 17 | `core/read_snapgene.py`, the hand-rolled `.dna` binary parser |
 
 ## The synthetic dataset
 
@@ -164,7 +164,7 @@ good designs.
 
 The CBCL reader and the barcode helpers are no longer duplicated; the tests
 that used to check the three copies agreed now assert they are one object, and
-two tests hold `core.illumina`'s whole-file and per-tile readers to the same
+two tests hold `core.read_cbcl`'s whole-file and per-tile readers to the same
 bytes. What remains of that pattern:
 
 Several UdiTaS tests assert that duplicated code agrees with itself rather
@@ -199,4 +199,4 @@ Still uncovered, roughly in order of value:
 - `apps/human_profiling/` is fully covered: the eleven one-run diagnostic and
   reporting scripts were deleted rather than tested, and the three that remain
   (`verify_structure`, `recheck_inserts`, `extract_salvage`) all have tests
-  here, as do `core.illumina`, `core.barcodes` and `core.snapgene`
+  here, as do `core.read_cbcl`, `core.barcodes` and `core.read_snapgene`

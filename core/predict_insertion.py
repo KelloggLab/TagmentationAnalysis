@@ -1,27 +1,35 @@
-"""Helpers for novel (engineered) CAST systems.
+"""Where a CAST should insert for a given spacer.
 
-Predicts where a CAST should insert for a given spacer, using the spacing
-measured from our profiling data rather than observed sequencing reads.
-For the same quantities measured from real insertions, see
-TsvMapHelperFunctions.characterize_insertion_from_spacer.
+Uses the spacing measured from our own profiling data rather than observed
+reads, so it answers "where do we expect this guide to put the cargo?" before
+any sequencing. For the same quantities measured from real insertions, see
+`insertions.characterize_insertion_from_spacer`.
+
+The two constants below were measured on E. coli profiling data and are not
+necessarily right for another system.
 """
 
+from __future__ import annotations
+
 import pandas as pd
+
+from .guides import map_guide_to_genome
+
 
 # Insertion point measured from the end of the PAM, and the +/- window used
 # to pull target-site sequence context around it.
 INSERTION_DISTANCE = 71
+
+
 TARGET_SITE_WINDOW = 10
 
 
 def predict_insertion_from_spacer(guideRNA, genome_sequence):
     #from spacer find insertions that occur at the 'correct' distance:
-    from . import postprocessHelpers as hp
-
     distance = INSERTION_DISTANCE
     window = TARGET_SITE_WINDOW
 
-    grna = hp.map_guide_to_genome(guideRNA,genome_sequence)
+    grna = map_guide_to_genome(guideRNA,genome_sequence)
     if grna[0]['strand'] == '+':
         predicted_pos = grna[0]['end']+3+distance
     else:

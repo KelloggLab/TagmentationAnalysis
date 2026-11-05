@@ -1,5 +1,5 @@
 """Tests for the UdiTaS readers in `apps/human_profiling/` and the CBCL
-reader they share, `core.illumina`.
+reader they share, `core.read_cbcl`.
 
 This code had no tests because it reads Illumina `.cbcl` files directly and
 there was no way to hand it an input. `make_cbcl_fixtures.py` writes a
@@ -27,7 +27,7 @@ import make_cbcl_fixtures as fx  # noqa: E402
 
 try:
     import numpy as np
-    from core import barcodes, illumina
+    from core import barcodes, read_cbcl
     import extract_salvage as es
     import recheck_inserts as ri
     import verify_structure as vs
@@ -162,7 +162,7 @@ class CbclDecodingTest(unittest.TestCase):
     def test_header_reports_the_tiles_it_was_written_with(self):
         path = f"{self.lane}/C{fx.I1_START}.1/L001_1.cbcl"
         with open(path, "rb") as fh:
-            header_size, tiles, qmap = illumina.read_header(fh)
+            header_size, tiles, qmap = read_cbcl.read_header(fh)
         self.assertEqual(len(tiles), self.truth["n_tiles"])
         self.assertEqual([t[1] for t in tiles],
                          self.truth["clusters_per_tile"])
@@ -173,11 +173,11 @@ class CbclDecodingTest(unittest.TestCase):
 
     def test_decoded_cluster_counts_match_each_tile(self):
         for t, n in enumerate(self.truth["clusters_per_tile"]):
-            bases, _ = illumina.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)
+            bases, _ = read_cbcl.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)
             self.assertEqual(bases.shape, (n, fx.I1_LEN))
 
     def test_quality_bins_decode_to_phred_characters(self):
-        _, quals = illumina.read_tile(self.lane, fx.R2_START, 10, 0, want_qual=True)
+        _, quals = read_cbcl.read_tile(self.lane, fx.R2_START, 10, 0, want_qual=True)
         expected = chr(33 + min(self.truth["qbins"][str(fx.GOOD_BIN)], 60))
         chars = {chr(c) for c in quals.flatten()}
         self.assertEqual(chars, {expected},
@@ -188,18 +188,18 @@ class CbclDecodingTest(unittest.TestCase):
         to one tile by summing compressed sizes. The two used to live in
         different scripts as the whole-file and per-tile readers; now they are
         one module, and this holds them to the same bytes."""
-        path = illumina.cbcl_path(self.lane, fx.I1_START)
-        whole, _ = illumina.decode_tiles(path, self.truth["n_tiles"])
-        pieces = [illumina.decode_tile(path, t)[0]
+        path = read_cbcl.cbcl_path(self.lane, fx.I1_START)
+        whole, _ = read_cbcl.decode_tiles(path, self.truth["n_tiles"])
+        pieces = [read_cbcl.decode_tile(path, t)[0]
                   for t in range(self.truth["n_tiles"])]
         self.assertTrue(np.array_equal(whole, np.concatenate(pieces)))
 
     def test_read_tiles_matches_read_tile_per_tile(self):
         """The same property one level up, where the scripts actually call in:
         verify_structure uses read_tiles, the other two use read_tile."""
-        whole, _ = illumina.read_tiles(self.lane, fx.I1_START, fx.I1_LEN,
+        whole, _ = read_cbcl.read_tiles(self.lane, fx.I1_START, fx.I1_LEN,
                                        self.truth["n_tiles"])
-        pieces = [illumina.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)[0]
+        pieces = [read_cbcl.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)[0]
                   for t in range(self.truth["n_tiles"])]
         self.assertTrue(np.array_equal(whole, np.concatenate(pieces)))
 
@@ -209,7 +209,7 @@ class CbclDecodingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "C1.1" / "L001_1.cbcl"
             fx.write_cbcl(path, [["A", "N", "C", "N", "G", "T"]])
-            seq, _ = illumina.decode_tile(str(path), 0)
+            seq, _ = read_cbcl.decode_tile(str(path), 0)
         self.assertEqual(seq.tobytes().decode(), "ANCNGT")
 
     def test_an_odd_cluster_count_round_trips(self):
@@ -218,14 +218,14 @@ class CbclDecodingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "C1.1" / "L001_1.cbcl"
             fx.write_cbcl(path, [["A", "C", "G", "T", "A"]])
-            seq, _ = illumina.decode_tile(str(path), 0)
+            seq, _ = read_cbcl.decode_tile(str(path), 0)
         self.assertEqual(seq.tobytes().decode(), "ACGTA")
 
     def test_every_base_round_trips(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "C1.1" / "L001_1.cbcl"
             fx.write_cbcl(path, [list("ACGTACGTACGT")])
-            seq, _ = illumina.decode_tile(str(path), 0)
+            seq, _ = read_cbcl.decode_tile(str(path), 0)
         self.assertEqual(seq.tobytes().decode(), "ACGTACGTACGT")
 
     def test_indexes_decode_to_the_barcodes_that_were_written(self):
@@ -235,8 +235,8 @@ class CbclDecodingTest(unittest.TestCase):
         i5_map = es.one_mismatch_map([es.rc(i5) for _, _, i5, _ in es.SAMPLES])
         assigned = 0
         for t in range(self.truth["n_tiles"]):
-            i1, _ = illumina.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)
-            i2, _ = illumina.read_tile(self.lane, fx.I2_START, fx.I2_LEN, t)
+            i1, _ = read_cbcl.read_tile(self.lane, fx.I1_START, fx.I1_LEN, t)
+            i2, _ = read_cbcl.read_tile(self.lane, fx.I2_START, fx.I2_LEN, t)
             for k in range(i1.shape[0]):
                 bc7 = i7_map.get(i1[k].tobytes().decode())
                 bc5 = i5_map.get(i2[k, fx.UMI_LEN:].tobytes().decode())

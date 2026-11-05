@@ -160,7 +160,7 @@
     <tr><th>Folder</th><th>Contents</th></tr>
     <tr>
       <td><code>core/</code></td>
-      <td>Functions shared across the apps, documented in the <a href="API.md">API reference</a>.</td>
+      <td>Functions shared across the apps &mdash; <code>sequence</code>, <code>motifs</code>, <code>guides</code>, <code>insertions</code>, <code>plots</code> and the readers &mdash; documented in the <a href="API.md">API reference</a>.</td>
     </tr>
     <tr>
       <td><code>apps/ecoli_profiling/</code></td>
@@ -206,8 +206,7 @@ conda activate seqsuite</code></pre>
     <li>
       Analyze the resulting TSV in Python:
       <pre><code>import pandas as pd
-from core import postprocessHelpers as hp
-from core import TsvMapHelperFunctions as tsvhp
+from core import sequence, guides, insertions
 
 tsv = pd.read_csv("mapped_reads/sample_merged.insertions.5p.nobackbone.tsv", sep="\t")
 genome = hp.load_genome("genome.fasta")

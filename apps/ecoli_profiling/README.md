@@ -72,10 +72,19 @@ position in column 3 and the strand in column 5, which is what step 1 writes.
 ## Analysing the result
 
 The insertion TSV is the input to the shared functions in
-[`core/`](../../core): `TsvMapHelperFunctions.py` for on-target percentage,
-target-site duplications and profiles, and `postprocessHelpers.py` for
+[`core/`](../../core): `insertions.py` for on-target percentage and
+target-site duplications, `plots.py` for the profile figure, and
+`guides.py`/`sequence.py`/`motifs.py` for
 guide/PAM placement, A/T richness and position weight matrices. See
 [docs/API.md](../../docs/API.md).
+
+`ccdb_integration.py` lives here rather than in `core/`: its `integration_finder`
+takes the ccdB gene's coordinates and scores how far each insertion fell from
+the PAM, which only means anything for this assay's landing site. Import it as
+
+```python
+from apps.ecoli_profiling import ccdb_integration
+```
 
 `apps/human_profiling/extract_salvage.py` writes exactly the input shape
 `map_junction_insertions.py` consumes, which is where this app and the human

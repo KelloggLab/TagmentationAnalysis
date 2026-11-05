@@ -9,7 +9,7 @@ dependencies:
   - bwa
   - samtools
   - gnuplot
-  - bbmap          # core.NGSanalysis_module.process_reads only
+  - bbmap          # core.bbmap_workflow.process_reads only
   # Python libraries
   - pysam
   - biopython
